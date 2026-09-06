@@ -46,10 +46,12 @@ class Fact:
     confidence: str
     data_class: str
     raw_text: str | None = None
+    candidate_id: str | UUID | None = None
     conversation_id: str | UUID | None = None
     message_id: str | None = None
     id: str | UUID | None = None
     status: str = AttributeStatusEnum.current.value
+    created_at: Any = None
 
     def get_source_rank(self) -> int:
         return SOURCE_RANKS.get(self.source, 0)

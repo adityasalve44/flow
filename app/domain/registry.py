@@ -239,5 +239,6 @@ def all_blocking_keys() -> list[str]:
     return [spec.key for spec in REGISTRY.values() if spec.blocking]
 
 
+BLOCKING_KEYS: frozenset[str] = frozenset(all_blocking_keys())
 get_key_spec = lookup_key
 get_blocking_keys = all_blocking_keys

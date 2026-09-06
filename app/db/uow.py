@@ -21,6 +21,7 @@ from app.repositories.conversation import (
     ConversationRepository,
     MessageRepository,
 )
+from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
 
 
@@ -43,6 +44,7 @@ class UnitOfWork:
         self.conversations = ConversationRepository(session)
         self.messages = MessageRepository(session)
         self.attributes = AttributeRepository(session)
+        self.profiles = ProfileRepository(session)
         self.resumes = ResumeRepository(session)
 
     def __enter__(self) -> "UnitOfWork":

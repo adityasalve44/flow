@@ -17,6 +17,7 @@ from app.repositories.conversation import (
     get_active_conversation,
     get_recent_messages,
 )
+from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "CandidateRepository",
     "ConversationRepository",
     "MessageRepository",
+    "ProfileRepository",
     "ResumeRepository",
     "get_candidate_by_id",
     "get_candidate_by_phone",
