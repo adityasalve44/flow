@@ -30,6 +30,7 @@ from app.models.profile import (
     CandidateRolePref,
     CandidateLocationPref,
 )
+from app.models.moderation import ModerationEvent
 
 __all__ = [
     "Base",
@@ -54,4 +55,5 @@ __all__ = [
     "CandidateSkill",
     "Conversation",
     "Message",
+    "ModerationEvent",
 ]

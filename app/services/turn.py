@@ -39,7 +39,13 @@ from app.services.conversation import resolve_conversation
 logger = logging.getLogger(__name__)
 
 from app.agents.callbacks import SAFE_FALLBACK_REPLY
-from app.domain.moderation import reopen_conversation, should_reopen_conversation
+from app.domain.moderation import (
+    CALM_ABUSE_WARNING,
+    check_abuse_lexicon,
+    record_moderation_event,
+    reopen_conversation,
+    should_reopen_conversation,
+)
 
 
 @dataclass(frozen=True)
@@ -103,8 +109,51 @@ class TurnService:
                 display_name=inbound.contact_name,
             )
 
-            # Check if candidate has a recent conversation closed due to disengagement
+            # Invariant: Blocked candidate rejected at the very first gate
+            if candidate.blocked_at is not None:
+                return TurnResult(
+                    candidate_id=candidate.id,
+                    conversation_id=None,
+                    reply_text="",
+                    directive="blocked",
+                    mode="blocked",
+                    is_closed=True,
+                    inbound_message_id=None,
+                    outbound_message_id=None,
+                )
+
+            # Check if candidate has a recent conversation that was closed, escalated, or disengaged
             latest_conv = uow.conversations.get_latest(candidate.id)
+
+            # If previous conversation was escalated, replies stop
+            if (
+                latest_conv
+                and latest_conv.status in (ConversationStatusEnum.escalated, ConversationStatusEnum.blocked)
+            ):
+                inbound_msg = Message(
+                    conversation_id=latest_conv.id,
+                    candidate_id=candidate.id,
+                    direction=DirectionEnum.inbound,
+                    channel_message_id=inbound.channel_message_id,
+                    body=message_body,
+                    media_ref=media_ref,
+                    created_at=current_time,
+                )
+                uow.messages.add(inbound_msg)
+                latest_conv.last_inbound_at = current_time
+                uow.commit()
+                return TurnResult(
+                    candidate_id=candidate.id,
+                    conversation_id=latest_conv.id,
+                    reply_text="",
+                    directive="disengage_silent",
+                    mode=latest_conv.mode.value if hasattr(latest_conv.mode, "value") else str(latest_conv.mode),
+                    is_closed=True,
+                    inbound_message_id=inbound_msg.id,
+                    outbound_message_id=None,
+                )
+
+            # Check if candidate has a recent conversation closed due to disengagement
             if (
                 latest_conv
                 and latest_conv.status in (ConversationStatusEnum.closed, ConversationStatusEnum.disengaged)
@@ -161,6 +210,64 @@ class TurnService:
             cand_id = candidate.id
             conv_id = conversation.id
             inbound_msg_id = inbound_msg.id
+
+            # Deterministic ingress abuse check before any model call (§3, FLOW-029)
+            if check_abuse_lexicon(message_body):
+                conversation.abuse_count += 1
+                if conversation.abuse_count == 1:
+                    # Strike 1: One calm warning, record event, zero model calls
+                    record_moderation_event(
+                        uow=uow,
+                        candidate_id=cand_id,
+                        conversation_id=conv_id,
+                        message_id=inbound_msg_id,
+                        kind="warn_abuse",
+                        detail="Abusive language detected by ingress lexicon",
+                    )
+                    outbound_msg = Message(
+                        conversation_id=conv_id,
+                        candidate_id=cand_id,
+                        direction=DirectionEnum.outbound,
+                        channel_message_id=f"out-{uuid4()}",
+                        body=CALM_ABUSE_WARNING,
+                        created_at=current_time,
+                    )
+                    uow.messages.add(outbound_msg)
+                    conversation.last_outbound_at = current_time
+                    uow.commit()
+                    return TurnResult(
+                        candidate_id=cand_id,
+                        conversation_id=conv_id,
+                        reply_text=CALM_ABUSE_WARNING,
+                        directive="warn_abuse",
+                        mode=conversation.mode.value if hasattr(conversation.mode, "value") else str(conversation.mode),
+                        is_closed=False,
+                        inbound_message_id=inbound_msg_id,
+                        outbound_message_id=outbound_msg.id,
+                    )
+                else:
+                    # Strike 2: Escalate, record event, silence (replies stop), zero model calls
+                    conversation.status = ConversationStatusEnum.escalated
+                    conversation.closed_at = current_time
+                    record_moderation_event(
+                        uow=uow,
+                        candidate_id=cand_id,
+                        conversation_id=conv_id,
+                        message_id=inbound_msg_id,
+                        kind="escalated",
+                        detail="Repeated abuse detected by ingress lexicon; conversation escalated",
+                    )
+                    uow.commit()
+                    return TurnResult(
+                        candidate_id=cand_id,
+                        conversation_id=conv_id,
+                        reply_text="",
+                        directive="disengage_silent",
+                        mode=conversation.mode.value if hasattr(conversation.mode, "value") else str(conversation.mode),
+                        is_closed=True,
+                        inbound_message_id=inbound_msg_id,
+                        outbound_message_id=None,
+                    )
 
             # Step 2: Evaluate consent gate
             consent_decision = evaluate_consent_turn(

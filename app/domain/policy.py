@@ -23,7 +23,11 @@ from app.db.uow import UnitOfWork
 from app.domain.completeness import is_profile_ready
 from app.domain.identity import names_are_compatible, update_candidate_identity
 from app.domain.merge import Fact, MergeContext, merge_facts
-from app.domain.moderation import is_genuine_deflection, record_deflection
+from app.domain.moderation import (
+    is_genuine_deflection,
+    record_deflection,
+    record_moderation_event,
+)
 from app.domain.normalize import (
     normalize_experience,
     normalize_location,
@@ -409,7 +413,7 @@ def evaluate_policy_step(
         ask_counts = {}
         conversation.ask_counts = ask_counts
 
-    # Rung 1: disengage_silent (deflection_count >= 3)
+    # Rung 1: disengage_silent (deflection_count >= 3 or abuse_count >= 2)
     if conversation.deflection_count >= 3:
         conversation.status = ConversationStatusEnum.closed
         conversation.closed_at = current_time
@@ -417,9 +421,30 @@ def evaluate_policy_step(
             name="disengage_silent",
             reason="Candidate disengaged after 3 deflections",
         )
+    elif conversation.abuse_count >= 2:
+        conversation.status = ConversationStatusEnum.escalated
+        conversation.closed_at = current_time
+        record_moderation_event(
+            uow=uow,
+            candidate_id=candidate.id,
+            conversation_id=conversation.id,
+            kind="escalated",
+            detail="Repeated abuse signal; conversation escalated and replies stopped",
+        )
+        chosen_directive = PolicyDirective(
+            name="disengage_silent",
+            reason="Repeated abuse; conversation escalated and replies stopped",
+        )
 
-    # Rung 2: warn_abuse (Abuse signal)
+    # Rung 2: warn_abuse (Abuse signal on first occurrence)
     elif extraction.abuse_signal or conversation.abuse_count > 0:
+        record_moderation_event(
+            uow=uow,
+            candidate_id=candidate.id,
+            conversation_id=conversation.id,
+            kind="warn_abuse",
+            detail="First abuse warning issued",
+        )
         chosen_directive = PolicyDirective(
             name="warn_abuse",
             reason="Abuse detected in turn",
