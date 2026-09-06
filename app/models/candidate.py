@@ -84,6 +84,17 @@ class Candidate(Base, TimestampMixin):
 
     blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Recruiter assignment (FLOW-038). Current-state only, not a history
+    # table — "assign candidates" is a simple current-owner operation per
+    # the requirements; every change is still recorded in audit_events, so
+    # history is available without a dedicated assignment table.
+    assigned_recruiter_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("flow.recruiters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Relationships
     profile: Mapped[CandidateProfile | None] = relationship(
         "CandidateProfile",

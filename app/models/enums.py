@@ -102,3 +102,16 @@ class ChannelEnum(str, enum.Enum):
     """Communication channel."""
     whatsapp = "whatsapp"
     simulator = "simulator"
+
+
+class RecruiterRoleEnum(str, enum.Enum):
+    """Recruiter account role (FLOW-038).
+
+    Two roles only, matching what Phase 5 actually needs: any active
+    recruiter can search, view, correct data and assign candidates; only
+    admin can create or deactivate recruiter accounts. Finer-grained
+    permissions are not justified until a real organisation with more than
+    a handful of recruiters exists to need them.
+    """
+    recruiter = "recruiter"
+    admin = "admin"

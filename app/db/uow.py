@@ -29,6 +29,7 @@ from app.repositories.profile import (
     RolePrefRepository,
     SkillRepository,
 )
+from app.repositories.recruiter import RecruiterNoteRepository, RecruiterRepository
 from app.repositories.recruiter_search import CandidateSearchRepository
 from app.repositories.resume import ResumeRepository
 
@@ -58,6 +59,8 @@ class UnitOfWork:
         self.location_prefs = LocationPrefRepository(session)
         self.resumes = ResumeRepository(session)
         self.candidate_search = CandidateSearchRepository(session)
+        self.recruiters = RecruiterRepository(session)
+        self.recruiter_notes = RecruiterNoteRepository(session)
         self.moderation_events = ModerationEventRepository(session)
         self.audit_events = AuditRepository(session)
 

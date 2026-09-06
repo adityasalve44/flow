@@ -56,7 +56,7 @@
 ## Phase 5 · Recruiter surface
 
 - `[x]` **FLOW-037** — Recruiter read API with three-class filtering
-- `[ ]` **FLOW-038** — Recruiter identity, roles and verification
+- `[x]` **FLOW-038** — Recruiter identity, roles and verification
 - `[ ]` **FLOW-039** — Incomplete-candidate backlog view
 - `[ ]` **FLOW-040** — Observability
 

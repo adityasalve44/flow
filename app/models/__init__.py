@@ -24,6 +24,7 @@ from app.models.enums import (
     DataClassEnum,
     DirectionEnum,
     LifecycleStatusEnum,
+    RecruiterRoleEnum,
     SourceEnum,
 )
 from app.models.moderation import ModerationEvent
@@ -32,6 +33,7 @@ from app.models.profile import (
     CandidateRolePref,
     CandidateSkill,
 )
+from app.models.recruiter import Recruiter, RecruiterNote
 from app.models.resume import Resume
 
 __all__ = [
@@ -47,6 +49,7 @@ __all__ = [
     "DataClassEnum",
     "DirectionEnum",
     "LifecycleStatusEnum",
+    "RecruiterRoleEnum",
     "SourceEnum",
     # Models
     "AuditEvent",
@@ -59,5 +62,7 @@ __all__ = [
     "Conversation",
     "Message",
     "ModerationEvent",
+    "Recruiter",
+    "RecruiterNote",
     "Resume",
 ]
