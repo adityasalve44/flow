@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 from app.agents.schemas import ExtractionConfidenceEnum, TurnExtraction
 from app.db.uow import UnitOfWork
 from app.domain.completeness import is_profile_ready
+from app.domain.identity import names_are_compatible, update_candidate_identity
 from app.domain.merge import Fact, MergeContext, merge_facts
 from app.domain.normalize import (
     normalize_experience,
@@ -479,15 +480,17 @@ def evaluate_policy_step(
             reason="Off-topic question without answers",
         )
 
-    # Rung 10: clarify_name (contact name conflicts with profile name)
+    # Rung 10: clarify_name (contact name conflicts with profile name; yields to facts)
     elif (
-        candidate.display_name
+        not extraction.facts
+        and candidate.display_name
         and profile.full_name
-        and candidate.display_name.strip().lower() != profile.full_name.strip().lower()
+        and not names_are_compatible(candidate.display_name, profile.full_name)
     ):
         chosen_directive = PolicyDirective(
             name="clarify_name",
             reason="Candidate WhatsApp contact name conflicts with full_name",
+            detail=f"contact={candidate.display_name}, profile={profile.full_name}",
         )
 
     # Check missing fields for rungs 11, 12, 13
