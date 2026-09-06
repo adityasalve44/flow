@@ -23,7 +23,7 @@ from uuid import UUID
 
 from app.db.uow import UnitOfWork
 from app.models import Candidate, Conversation
-from app.models.enums import ConversationStatusEnum
+from app.models.enums import ConversationStatusEnum, LifecycleStatusEnum
 from app.models.moderation import ModerationEvent
 
 # Heuristics for detecting change of tone or willingness to engage

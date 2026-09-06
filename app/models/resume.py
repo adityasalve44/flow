@@ -104,7 +104,7 @@ class Resume(Base):
     )
 
     # Relationships
-    candidate: Mapped[Candidate] = relationship(  # type: ignore[name-defined]
+    candidate: Mapped["Candidate"] = relationship(
         "Candidate",
         back_populates="resumes",
     )
