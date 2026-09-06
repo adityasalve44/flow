@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # --- Webhook security ---
     webhook_secret: str = ""
 
+    # --- Storage (FLOW-033) ---
+    storage_backend: str = "local"
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_resume_bucket: str = "resumes"
+    local_storage_dir: str = ".storage"
+
     @field_validator("database_url", "test_database_url", mode="before")
     @classmethod
     def _coerce_db_url(cls, v: str | None) -> str | None:
