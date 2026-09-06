@@ -92,3 +92,20 @@ class AttributeRepository:
         )
         self.session.flush()
         return new_attribute
+
+    def mark_all_current_as_stale(self, candidate_id: UUID | str) -> int:
+        """
+        Mark all currently active facts as stale (e.g. when opening in refresh mode).
+        Never deletes facts, preserving complete history.
+        """
+        statement = (
+            update(CandidateAttribute)
+            .where(
+                CandidateAttribute.candidate_id == candidate_id,
+                CandidateAttribute.status == AttributeStatusEnum.current,
+            )
+            .values(status=AttributeStatusEnum.stale)
+        )
+        result = self.session.execute(statement)
+        self.session.flush()
+        return result.rowcount or 0
