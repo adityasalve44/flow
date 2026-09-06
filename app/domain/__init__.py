@@ -9,6 +9,18 @@ from app.domain.merge import (
     SOURCE_RANKS,
     merge_facts,
 )
+from app.domain.normalize import (
+    ExperienceNormalized,
+    LocationNormalized,
+    MoneyNormalized,
+    NoticePeriodNormalized,
+    has_hedge_word,
+    normalize_experience,
+    normalize_location,
+    normalize_money,
+    normalize_notice_period,
+    normalize_phone,
+)
 from app.domain.projection import (
     BLOCKING_KEYS,
     ProfileSnapshot,
@@ -30,6 +42,17 @@ __all__ = [
     "MergeResult",
     "SOURCE_RANKS",
     "merge_facts",
+    # Normalisers
+    "ExperienceNormalized",
+    "LocationNormalized",
+    "MoneyNormalized",
+    "NoticePeriodNormalized",
+    "has_hedge_word",
+    "normalize_experience",
+    "normalize_location",
+    "normalize_money",
+    "normalize_notice_period",
+    "normalize_phone",
     # Projection
     "BLOCKING_KEYS",
     "ProfileSnapshot",
