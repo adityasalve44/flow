@@ -19,6 +19,7 @@ def test_defaults_from_env(monkeypatch):
     s = Settings(
         database_url="postgresql+psycopg://u:p@localhost/flow",
         google_api_key="test-key",
+        env="development",  # explicitly set so ENV env var doesn't interfere
     )
     assert s.active_window_hours == 24
     assert s.stale_profile_days == 365
@@ -62,6 +63,7 @@ def test_is_not_testing_by_default():
     s = Settings(
         database_url="postgresql+psycopg://u:p@localhost/flow",
         google_api_key="k",
+        env="development",  # explicitly override ENV env var in test process
     )
     assert s.is_testing is False
     assert s.effective_database_url.endswith("/flow")
