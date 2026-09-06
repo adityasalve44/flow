@@ -293,6 +293,7 @@ def evaluate_policy_step(
     declined_keys: set[str] | None = None,
     channel_message_id: str | None = None,
     now: datetime | None = None,
+    blackout_sentiment: str | None = None,
 ) -> tuple[PolicyDirective, ProfileSnapshot]:
     """
     Execute the full deterministic policy evaluation and ladder.
@@ -569,11 +570,32 @@ def evaluate_policy_step(
             reason="Consent declined or withdrawn",
         )
 
-    # Rung 4: ask_consent (pending consent)
-    elif candidate.consent_status == ConsentStatusEnum.pending:
+    # Rung 4: Blackout comebacks (delay / recovery during outage)
+    elif blackout_sentiment == "cursing":
+        conversation.status = ConversationStatusEnum.escalated
+        conversation.closed_at = current_time
+        record_moderation_event(
+            uow=uow,
+            candidate_id=candidate.id,
+            conversation_id=conversation.id,
+            kind="escalated",
+            detail="Candidate abusive/cursing during outage; flagged for admin intervention",
+        )
         chosen_directive = PolicyDirective(
-            name="ask_consent",
-            reason="Consent pending",
+            name="disengage_silent",
+            reason="Abusive during blackout; escalated and replies stopped",
+        )
+
+    elif blackout_sentiment == "frustrated":
+        chosen_directive = PolicyDirective(
+            name="blackout_apology_frustrated",
+            reason="Candidate expressed frustration during blackout; de-escalating",
+        )
+
+    elif blackout_sentiment == "polite":
+        chosen_directive = PolicyDirective(
+            name="blackout_apology_polite",
+            reason="Candidate sent polite check-in during blackout; apologizing for delay",
         )
 
     # Rung 5: offer_call (deflection_count == 2)
@@ -645,7 +667,8 @@ def evaluate_policy_step(
             reason="Candidate WhatsApp contact name conflicts with full_name",
             detail=f"contact={candidate.display_name}, profile={profile.full_name}",
         )
-    elif extraction.intent == IntentEnum.greet and not extraction.facts:
+    # First contact intro: candidate greeted or sent first message without facts
+    elif (extraction.intent == IntentEnum.greet or not current_facts) and not extraction.facts:
         if conversation.mode == ConversationModeEnum.refresh:
             chosen_directive = PolicyDirective(
                 name="greet_returning",
@@ -653,16 +676,10 @@ def evaluate_policy_step(
                 reason="Returning candidate in refresh mode; ask current role target",
             )
         else:
-            from app.domain.identity import evaluate_greeting_directive
-            g_dir, g_ctx = evaluate_greeting_directive(
-                contact_name=candidate.display_name,
-                profile_name=profile.full_name,
-                has_extracted_facts=bool(current_facts),
-            )
             chosen_directive = PolicyDirective(
-                name=g_dir,
-                reason="Candidate greeting evaluated via greeting policy",
-                detail=str(g_ctx),
+                name="first_contact_intro",
+                fields_to_ask=["desired_role", "skills", "location_preference", "expected_ctc", "notice_period"],
+                reason="First contact introduction: warm opening asking for core details across all industries",
             )
 
     # Resume confirmation response check (FLOW-036 & §11)
@@ -698,7 +715,7 @@ def evaluate_policy_step(
             reason="Candidate confirmed existing resume on file (§11)",
         )
 
-    # Check missing fields for rungs 11, 12, 13
+    # Check missing fields for profile readiness
     else:
         missing_fields = score_missing_fields(
             current_facts, recently_asked, declined_keys, ask_counts=ask_counts
@@ -718,8 +735,6 @@ def evaluate_policy_step(
                     fields_to_ask=missing_fields or ["desired_role", "expected_ctc"],
                     reason="Refresh mode: reconfirm current career targets",
                 )
-        # Rung 11: Resume confirmation / ask_resume (FLOW-036 & §11)
-        # Flow asks for a resume once per recruitment interaction, never twice
         elif ready:
             current_resume = uow.resumes.get_current(candidate.id)
             has_attr_resume = any(f.key == "resume" for f in current_facts)
@@ -728,7 +743,7 @@ def evaluate_policy_step(
             if already_asked_resume or has_attr_resume:
                 chosen_directive = PolicyDirective(
                     name="acknowledge_profile_ready",
-                    reason="All six baseline fields confirmed; profile ready",
+                    reason="All six baseline fields confirmed; profile ready and reconfirmed",
                 )
             elif current_resume is not None:
                 now_dt = now or datetime.now(UTC)
@@ -744,7 +759,7 @@ def evaluate_policy_step(
                     )
                 else:
                     chosen_directive = PolicyDirective(
-                        name="acknowledge_profile_ready",
+                        name="confirm_and_close",
                         reason="Resume already confirmed; profile ready",
                     )
             else:
@@ -753,12 +768,14 @@ def evaluate_policy_step(
                     fields_to_ask=["resume"],
                     reason="Profile substantially complete; request resume",
                 )
-        # Rung 12: ask_next (default top 1-2 scored fields)
+        # Consolidated ask for missing fields
         else:
+            from app.domain.completeness import get_missing_blocking_fields
+            missing_blocking = get_missing_blocking_fields(current_facts)
             chosen_directive = PolicyDirective(
-                name="ask_next",
-                fields_to_ask=missing_fields,
-                reason="Top scored missing fields",
+                name="ask_missing_fields",
+                fields_to_ask=missing_blocking or missing_fields,
+                reason="Consolidated ask for missing profile fields",
             )
 
     # Record ask counts on the conversation

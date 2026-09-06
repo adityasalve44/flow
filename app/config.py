@@ -6,6 +6,7 @@ variables (see .env.example). The module never reads os.environ directly —
 always go through get_settings().
 """
 
+import os
 from functools import lru_cache
 
 from pydantic import field_validator
@@ -29,8 +30,8 @@ class Settings(BaseSettings):
 
     # Models — separate configs so extractor (precision) and replier (fluency)
     # can be tuned independently.
-    extractor_model: str = "gemini-2.5-flash"
-    replier_model: str = "gemini-2.5-flash"
+    extractor_model: str = "gemini-3.6-flash"
+    replier_model: str = "gemini-3.6-flash"
 
     # --- Environment ---
     env: str = "development"
@@ -41,13 +42,26 @@ class Settings(BaseSettings):
     stale_profile_days: int = 365
     max_deflections: int = 2
 
-    # --- Webhook security ---
+    # --- Webhook security & Rate limits (FLOW-042) ---
     webhook_secret: str = ""
+    webhook_timestamp_tolerance_seconds: int = 300
+    daily_model_call_budget: int = 30
+    rate_limit_per_phone_per_minute: int = 20
+    rate_limit_per_ip_per_minute: int = 60
 
-    # --- Recruiter API security (FLOW-037) ---
-    # Placeholder shared-secret auth, mirroring webhook_secret. FLOW-038
-    # replaces this with real recruiter accounts, sessions and roles.
-    recruiter_api_key: str = ""
+    # --- Data Retention & Privacy (FLOW-043) ---
+    retention_protected_days: int = 30
+    retention_personal_days: int = 90
+    retention_operational_days: int = 365
+    retention_closed_conversation_days: int = 180
+
+    # --- WhatsApp Cloud API (FLOW-041) ---
+    whatsapp_verify_token: str = ""
+    whatsapp_app_secret: str = ""
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_api_version: str = "v21.0"
+    whatsapp_debounce_seconds: float = 0.0
 
     # --- Resume signed-URL TTL (FLOW-037) ---
     resume_signed_url_ttl_seconds: int = 3600
@@ -92,4 +106,8 @@ def get_settings() -> Settings:
     Call ``get_settings.cache_clear()`` in tests to reload settings with
     a different environment.
     """
-    return Settings()
+    settings = Settings()
+    if settings.google_api_key:
+        os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
+        os.environ.setdefault("GEMINI_API_KEY", settings.google_api_key)
+    return settings

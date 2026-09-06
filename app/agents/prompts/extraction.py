@@ -27,9 +27,10 @@ Only extract facts for the following allowed keys:
 {_REGISTRY_ENTRIES}
 
 ### EXTRACTION RULES
-1. NEVER INVENT: Only extract information that the candidate explicitly stated or directly answered. Do not hallucinate or assume unstated details.
-2. CONTEXT RESOLUTION: Use conversation history to resolve brief answers. If the assistant previously asked for expected salary and the candidate responds "12" or "15 LPA", extract `expected_ctc`. If the assistant asked for notice period and the candidate responds "immediate" or "30 days", extract `notice_period`.
-3. AMBIGUITY & HEDGING: If a value is approximate or hedged (e.g., "around 15-18 LPA", "maybe Berlin or Munich", "not sure, probably 2 months"), record the value and provide `ambiguity_reason`.
+1. INDUSTRY-AGNOSTIC: Candidates work across ALL industries (sales, marketing, finance, operations, healthcare, engineering, logistics, education, design, tech, etc.). Never assume or bias toward software engineering.
+2. NEVER INVENT: Only extract information that the candidate explicitly stated or directly answered. Do not hallucinate or assume unstated details.
+3. CONTEXT RESOLUTION: Use conversation history to resolve brief answers. If the assistant previously asked for expected salary and the candidate responds "12" or "15 LPA", extract `expected_ctc`. If the assistant asked for notice period and the candidate responds "immediate" or "30 days", extract `notice_period`.
+4. AMBIGUITY & HEDGING: If a value is approximate or hedged (e.g., "around 15-18 LPA", "maybe Pune or Mumbai", "not sure, probably 2 months"), record the value and provide `ambiguity_reason`.
 4. CORRECTIONS: If the candidate says "actually, I meant..." or "not Python, I write Go", extract an item in `corrections` with the key and new_value.
 5. QUESTIONS: If the candidate asks about the company, job roles, salary ranges, or process, extract an item in `questions` with the topic and whether it relates to what was just discussed.
 6. REFUSAL: If the candidate declines to answer a question ("I'd rather not say", "prefer not to disclose", "skip this"), set `refusal_signal: true` and intent to `refuse`.

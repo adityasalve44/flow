@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.database import get_session_factory
 from app.repositories.attribute import AttributeRepository
 from app.repositories.audit import AuditRepository
+from app.repositories.backlog import BacklogRepository
 from app.repositories.candidate import CandidateRepository
 from app.repositories.conversation import (
     ConversationRepository,
@@ -59,6 +60,7 @@ class UnitOfWork:
         self.location_prefs = LocationPrefRepository(session)
         self.resumes = ResumeRepository(session)
         self.candidate_search = CandidateSearchRepository(session)
+        self.backlog = BacklogRepository(session)
         self.recruiters = RecruiterRepository(session)
         self.recruiter_notes = RecruiterNoteRepository(session)
         self.moderation_events = ModerationEventRepository(session)

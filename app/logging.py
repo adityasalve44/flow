@@ -70,18 +70,33 @@ class LogContext:
             token.var.reset(token)
 
 
+def get_request_id() -> str | None:
+    return _ctx_request_id.get()
+
+
+def get_candidate_id() -> str | None:
+    return _ctx_candidate_id.get()
+
+
+def get_conversation_id() -> str | None:
+    return _ctx_conversation_id.get()
+
+
+def get_turn_id() -> str | None:
+    return _ctx_turn_id.get()
+
+
 # ---------------------------------------------------------------------------
 # PII redaction
 # ---------------------------------------------------------------------------
 
 # Matches E.164 phone numbers and common loose formats (+91XXXXXXXXXX, etc.)
-_PHONE_RE = re.compile(
-    r"(\+?[0-9]{1,3}[-.\s]?)?(\(?[0-9]{1,4}\)?[-.\s]?){2,}[0-9]{4,}"
-)
+_PHONE_RE = re.compile(r"(\+?[0-9]{1,3}[-.\s]?)?(\(?[0-9]{1,4}\)?[-.\s]?){2,}[0-9]{4,}")
 
 
 def _redact_phone(value: str) -> str:
     """Mask all but the last 4 digits of every phone-number-like sequence."""
+
     def _mask(m: re.Match) -> str:
         full = m.group(0)
         digits_only = re.sub(r"\D", "", full)
@@ -116,6 +131,7 @@ def _redact_record(record: dict, level: int) -> dict:
 # JSON formatter
 # ---------------------------------------------------------------------------
 
+
 class JsonFormatter(logging.Formatter):
     """Emit each log record as a single JSON object on stdout."""
 
@@ -142,10 +158,7 @@ class JsonFormatter(logging.Formatter):
         extra = {
             k: v
             for k, v in record.__dict__.items()
-            if k
-            not in logging.LogRecord(
-                "", 0, "", 0, "", (), None
-            ).__dict__
+            if k not in logging.LogRecord("", 0, "", 0, "", (), None).__dict__
             and not k.startswith("_")
         }
         obj.update(extra)
@@ -160,6 +173,7 @@ class JsonFormatter(logging.Formatter):
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
+
 
 def configure_logging(level: str = "INFO") -> None:
     """Install the JSON formatter on the root logger.

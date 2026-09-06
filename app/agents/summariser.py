@@ -50,7 +50,9 @@ def build_deterministic_summary(conversation: Conversation, messages: list[Messa
     """
     inbound_count = sum(1 for m in messages if m.direction == DirectionEnum.inbound)
     outbound_count = sum(1 for m in messages if m.direction == DirectionEnum.outbound)
-    start_date = conversation.started_at.strftime("%Y-%m-%d") if conversation.started_at else "Unknown"
+    start_date = (
+        conversation.started_at.strftime("%Y-%m-%d") if conversation.started_at else "Unknown"
+    )
 
     summary_parts = [
         f"Conversation started {start_date} in mode '{conversation.mode.value}'.",
@@ -82,7 +84,7 @@ def summarise_messages(
     messages: list[Message],
     conversation: Conversation,
     client: Any | None = None,
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-3.6-flash",
 ) -> str:
     """
     Produce a concise conversation summary.
@@ -99,6 +101,7 @@ def summarise_messages(
             settings = get_settings()
             if settings.gemini_api_key:
                 from google import genai
+
                 llm_client = genai.Client(api_key=settings.gemini_api_key)
         except Exception:
             llm_client = None

@@ -98,3 +98,15 @@ class SupabaseStorageAdapter:
             return signed_path
 
         return urllib.parse.urljoin(f"{self.base_url}/", signed_path.lstrip("/"))
+
+    def delete(self, object_key: str) -> bool:
+        """
+        Delete an object from Supabase Storage.
+        Returns True if deleted or already absent.
+        """
+        clean_key = object_key.lstrip("/")
+        endpoint = f"{self.base_url}/storage/v1/object/{self.bucket}/{clean_key}"
+        headers = self._headers(content_type="application/json")
+
+        response = self.http_client.delete(endpoint, headers=headers)
+        return response.status_code in (200, 204, 404)

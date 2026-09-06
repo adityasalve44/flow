@@ -78,6 +78,15 @@ def process_ingress(
     - Block check on candidates.blocked_at is evaluated as the very first gate.
     - Rate limit is strictly per-phone, counted directly in Postgres.
     """
+    # 0. Replay protection: reject timestamps outside the 5-minute window (FLOW-042)
+    from app.api.limits import is_timestamp_valid
+
+    if not is_timestamp_valid(event.timestamp, now=now):
+        return IngressResult(
+            decision=IngressDecision.REPLAY,
+            detail="Message timestamp outside 5-minute replay window",
+        )
+
     # 1. Idempotency gate: check if channel_message_id has already been processed
     existing_msg = uow.messages.get_by_channel_message_id(event.channel_message_id)
     if existing_msg is not None:

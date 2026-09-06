@@ -69,6 +69,7 @@ class Candidate(Base, TimestampMixin):
         nullable=False,
         default=LifecycleStatusEnum.new,
         server_default=LifecycleStatusEnum.new.value,
+        index=True,
     )
 
     # Consent gate (Q4)
@@ -126,6 +127,7 @@ class CandidateProfile(Base, TimestampMixin):
     Contains only operational facts that are confirmed and current.
     Money is NUMERIC(12,2) with an explicit currency column, never Float.
     """
+
     __tablename__ = "candidate_profiles"
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(
@@ -144,7 +146,7 @@ class CandidateProfile(Base, TimestampMixin):
     notice_period_days: Mapped[int | None] = mapped_column(Integer)
     work_mode: Mapped[str | None] = mapped_column(String(50))
     education_level: Mapped[str | None] = mapped_column(String(255))
-    completeness: Mapped[float | None] = mapped_column()
+    completeness: Mapped[float | None] = mapped_column(index=True)
     last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     candidate: Mapped[Candidate] = relationship(
@@ -155,6 +157,7 @@ class CandidateProfile(Base, TimestampMixin):
 
 class Conversation(Base, TimestampMixin):
     """A bounded exchange — has real state, counters and lifecycle."""
+
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -195,16 +198,14 @@ class Conversation(Base, TimestampMixin):
         server_default=func.now(),
         nullable=False,
     )
-    last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     last_outbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     deflection_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    abuse_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    abuse_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     candidate: Mapped[Candidate] = relationship(
@@ -220,6 +221,7 @@ class Conversation(Base, TimestampMixin):
 
 class Message(Base):
     """Every message, both directions. Unique on channel_message_id for idempotency."""
+
     __tablename__ = "messages"
 
     id: Mapped[uuid.UUID] = mapped_column(

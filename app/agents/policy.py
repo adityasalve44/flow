@@ -62,6 +62,7 @@ class PolicyAgent(BaseAgent):
         extraction = TurnExtraction.safe_parse(raw_extraction)
         recently_asked: list[str] = list(state.get("recently_asked", []))
         declined_keys: set[str] = set(state.get("declined_keys", []))
+        blackout_sentiment = state.get("temp:blackout_sentiment")
 
         # 2. Prepare UnitOfWork
         sf = self.session_factory or get_session_factory()
@@ -91,6 +92,7 @@ class PolicyAgent(BaseAgent):
                     extraction=extraction,
                     recently_asked=recently_asked,
                     declined_keys=declined_keys,
+                    blackout_sentiment=blackout_sentiment,
                 )
                 directive_dict = directive.to_dict()
                 snapshot_dict = asdict(snapshot)

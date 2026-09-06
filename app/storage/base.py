@@ -41,6 +41,16 @@ class StorageAdapter(Protocol):
         """
         ...
 
+    def delete(
+        self,
+        object_key: str,
+    ) -> bool:
+        """
+        Delete an object from storage.
+        Returns True if deleted or already absent, False if failed.
+        """
+        ...
+
 
 def get_storage_adapter(settings: Settings | None = None) -> StorageAdapter:
     """Factory returning the configured storage adapter (Supabase or Local)."""

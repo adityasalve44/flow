@@ -150,4 +150,87 @@
 - **Decision:** A correction's `value` must already be in the same canonical shape `app.domain.policy.normalize_fact_value()` produces for candidate-stated text (`{"amount": X}` for `experience_years`, `{"amount": X, "currency": ..., "period": ...}` for CTC fields, `{"days": X}` for `notice_period`), documented explicitly on `CorrectionRequest` in `app/api/recruiter.py`. Deliberately **not** routed through `normalize_fact_value()` itself: that function parses loose candidate phrasing and exists specifically to catch hedge words in free text — a recruiter correction is by definition already an authoritative, resolved value (`confidence=confirmed`), not text to be reinterpreted, and running it through a text parser risks silently mangling a well-formed structured value rather than visibly failing on a malformed one.
 
 ### Status
-- Phases 0–4 complete (FLOW-001 through FLOW-036, plus FLOW-045 and FLOW-047 added by the Q4/Q8 decisions). FLOW-037 and FLOW-038 complete. Phase 5 continues with FLOW-039 (backlog view) and FLOW-040 (observability).
+- Phases 0–4 complete (FLOW-001 through FLOW-036, plus FLOW-045 and FLOW-047 added by the Q4/Q8 decisions). FLOW-037, FLOW-038, and FLOW-039 complete. Phase 5 continues with FLOW-040 (observability).
+
+---
+
+## 10. Phase 5 Decisions — FLOW-039 & Simulator Frontend
+
+### FLOW-039 — Incomplete-Candidate Backlog View
+- **Indexed columns:** Added database migration (`42c70b2325f7_add_backlog_indexes.py`) indexing `candidate_profiles.completeness`, `conversations.last_inbound_at`, and `candidates.lifecycle_status`. Verified autogenerate produces zero diff against models.
+- **Inclusion & Exclusion Rules:**
+  - Candidates with `completeness < threshold` (default 1.0) inactive beyond `inactivity_days` (default 3) are surfaced.
+  - Candidates who are `profile_ready`, `blocked`, `disengaged` (3+ deflections), or who have not granted consent (`pending`, `declined`, `withdrawn`) are strictly excluded.
+- **Value Score:** Balanced metric combining profile readiness progress and recency:
+  $0.70 \times \text{completeness} + 0.30 \times \max(0, 1.0 - (\text{days\_inactive} - 3)/30)$.
+- **Three-Class Compliance:** Backlog response strictly conforms to Q5; zero personal or protected attributes are emitted.
+
+- **Interactive WhatsApp Simulator & Agent Intelligence Cockpit:**
+  - Served directly at `/` and `/simulator` via FastAPI static mount with vanilla HTML5, custom CSS design system (dark glassmorphism, responsive split layout), and vanilla JS.
+  - **Phone Simulator:** Live turn exchange with persona presets, thinking indicators, delivery status receipts, and quick reply chips.
+  - **Data Inspector Cockpit:** Real-time visibility into the directive ladder, conversation mode, deflection counter, operational profile projection, attribute provenance store (with source, confidence, status, data_class), preferences tag clouds, and live FLOW-039 backlog view.
+  - **Housekeeping:** Removed dead `recruiter_api_key` setting from `app/config.py` and `.env.example`.
+
+### FLOW-040 — Observability, Tracing, Cost Accounting & PII Absence
+- **One Trace Per Turn:** Root span named `turn` wraps the entire lifecycle of an inbound message from ingress to reply emission, reporting `turn.latency_ms`, `turn.cost_usd`, `turn.tokens.input`, `turn.tokens.output`, `turn.tokens.total`, and `turn.tool_calls_count`.
+- **Three Child Spans:** Child spans for each ADK pipeline agent (`extractor`, `policy`, `replier`) share the root turn's `trace_id` and point to the root turn as `parent_id`.
+- **Gemini Token Cost Modeling:** Implemented rate-card estimation in `app/observability/cost.py` for Gemini 2.5 Flash ($0.075 / 1M prompt tokens, $0.30 / 1M candidate tokens) and Gemini 2.5 Pro.
+- **Tool Spans:** Tool invocations create child spans recording `tool.name`, `tool.duration_ms`, and `tool.success`, while strictly suppressing all parameter arguments and result payloads to prevent identity or profile leakage.
+- **Strict PII Absence (§17):** Verified by automated test suites. Under no circumstances are phone numbers, candidate message bodies, prompt contents, or model completions recorded in OpenTelemetry span attributes or events. Only correlation IDs (`request_id`, `candidate_id`, `conversation_id`), latencies, counts, and cost metrics are emitted.
+
+### FLOW-041 — WhatsApp Channel Adapter (Meta WhatsApp Cloud API)
+- **Meta WhatsApp Cloud API Exclusivity (Q7):** Built exclusively against Graph API v21.0. No secondary provider or multi-provider abstraction layer.
+- **Strict Layering Boundary:** `InboundEvent` is the immutable architectural boundary. Absolutely no file under `app/domain/`, `app/services/`, or `app/agents/` imports from `app/channel/whatsapp/` (enforced via AST inspection test in `tests/test_layering.py`).
+- **Security & Integrity:** Verified `X-Hub-Signature-256` HMAC-SHA256 signature against raw payload bytes before parsing. Handshake endpoint handles GET `hub.mode`/`hub.verify_token`/`hub.challenge`.
+- **Payload Parsing:** Normalizes Cloud API webhook envelopes (`entry[].changes[].value.messages[]`) with E.164 phone formatting and profile contact names. Non-message events (e.g. delivery receipts) are ignored safely.
+- **Two-Step Media Download:** Media ID queries Graph API metadata for download URL, followed by authenticated binary stream fetch piped into `validate_media` (FLOW-034).
+- **Outbound Client:** Features exponential backoff retries on transient 5xx errors and strictly checks 24-hour customer service window expiry.
+
+### Status
+- Phases 0–5 complete (FLOW-001 through FLOW-040, plus FLOW-045 and FLOW-047).
+- Phase 6: FLOW-041, FLOW-042, FLOW-043 complete.
+- Next up: FLOW-044 (Production hardening).
+
+---
+
+## 2026-09-07 · FLOW-042: Rate limiting, replay protection & daily candidate spend control
+
+### Architectural Decisions
+1. **5-Minute Timestamp Replay Window (`±300s`)**:
+   - Webhook ingress evaluates the webhook payload timestamp. Any inbound event drifting by more than 300 seconds from server clock is rejected immediately at ingress with HTTP 400 (`timestamp_out_of_bounds`).
+2. **Postgres-Backed Sliding Window Rate Limiting (`flow.rate_limit_hits`)**:
+   - `RateLimitHit` table stores `(id, key, hit_at)` with compound B-tree index `(key, hit_at)`.
+   - Sliding window count executed via `SELECT COUNT(*) WHERE key = :key AND hit_at >= :window_start`.
+   - `IPRateLimiter` FastAPI dependency enforces 60 requests/min per IP on webhook endpoints, returning HTTP 429 (`Too many requests from this IP address`).
+   - Per-phone rate limit enforces 20 turns/min per phone number.
+3. **Candidate Daily Spend Protection**:
+   - Candidate turn counting queries inbound turns in the past 24 hours against the configured `daily_model_call_budget` (default: 30 turns/day).
+   - When budget is exhausted, turn execution halts before any LLM extractor or replier call.
+   - The candidate receives a graceful polite hold message: `"Thank you for sharing all these details today! Our team will review your profile and get back to you shortly."`
+
+---
+
+## 2026-09-07 · FLOW-043: Retention, deletion and consent integration
+
+### Architectural Decisions
+1. **Candidate PII Erasure Path (`erase_candidate_data`)**:
+   - Anonymizes phone number to unique identifier `+deleted_<uuid>` (maintaining database unique index constraints).
+   - Clears `display_name`, sets `consent_status=withdrawn`, `lifecycle_status=dormant`, and sets `blocked_at`.
+   - Deletes all personal and protected attributes from `flow.candidate_attributes` (breaking self-referential foreign keys cleanly before deletion).
+   - Removes all preference tags (`CandidateSkill`, `CandidateRolePref`, `CandidateLocationPref`) and profile projection (`CandidateProfile`).
+   - Removes resume records from DB and physically invokes `storage.delete(object_key)` on the configured storage adapter (`LocalStorageAdapter` and `SupabaseStorageAdapter`).
+   - Overwrites historical message bodies with `[deleted]` and clears `media_ref`.
+   - Emits immutable `AuditEvent` (`action="candidate_erasure"`).
+2. **Consent Withdrawal Integration**:
+   - Expanded vocabulary in `app.domain.consent` (`classify_consent`) detects expressions of withdrawal like "delete my data", "stop contacting me and delete everything", and "erase my data".
+   - In `TurnService.run()`, encountering `directive == "consent_withdrawn"` triggers immediate execution of `erase_candidate_data` before returning `CONSENT_WITHDRAWN_REPLY` and closing the conversation.
+3. **Data Classification Retention Sweep (`run_retention_sweep`)**:
+   - Enforces Q5 retention periods:
+     * `protected`: 30 days
+     * `personal`: 90 days
+     * `operational`: 365 days
+     * closed conversations: 180 days (with cascaded message pruning)
+   - Supports `--dry-run` flag via Python CLI (`python -m app.services.privacy --dry-run`) and programmatic calls, computing exact prune counts without mutating DB or storage.
+   - Non-dry run prunes expired rows and emits an immutable `AuditEvent` (`action="retention_sweep"`).
+
+

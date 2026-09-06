@@ -5,26 +5,25 @@ Principles (§3, §8, §19 of REVIEW_AND_PLAN.md):
 - Not a legal wall of text.
 - Short, WhatsApp-sized message explaining what is collected and why.
 - Clear opt-in question.
+- Human and warm — not a bot notice.
 """
 
 CONSENT_REQUEST_NOTICE = (
-    "Hi! Before we begin, Flow collects your career preferences and work details "
-    "to help match you with relevant job opportunities. We never share your data "
-    "without your permission.\n\n"
-    "Do you consent to proceed? (Reply 'Yes' to agree)"
+    "Hey! Before we get started, just a quick heads-up — we'll save your career details "
+    "to match you with relevant job opportunities. We don't share anything without your go-ahead.\n\n"
+    "Cool to proceed?"
 )
 
 CONSENT_DECLINED_REPLY = (
-    "Understood! We won't store any of your details or reach out again. "
-    "If you ever change your mind, just send us a message. Wishing you the best!"
+    "No worries at all! We won't store anything or reach out again. "
+    "Feel free to message if you ever change your mind. All the best!"
 )
 
 CONSENT_WITHDRAWN_REPLY = (
-    "Your consent has been withdrawn. We have stopped processing your profile. "
-    "Thank you for letting us know."
+    "Got it — we've removed your details. Thanks for letting us know."
 )
 
 CONSENT_REASK_NOTICE = (
-    "Thanks for sharing! Before we can save your preferences and help match you with roles, "
-    "we need your consent to collect and process your career details. Do you agree to proceed?"
+    "Happy to note down what you've shared! Before we save anything, "
+    "we just need your go-ahead to store and use your career details. Okay to continue?"
 )

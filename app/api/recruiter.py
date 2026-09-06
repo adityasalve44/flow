@@ -46,8 +46,10 @@ from app.models.enums import (
     SourceEnum,
 )
 from app.models.recruiter import Recruiter, RecruiterNote
+from app.repositories.backlog import BacklogParams
 from app.repositories.recruiter_search import CandidateSearchFilters
 from app.serializers.recruiter import (
+    serialize_backlog_item,
     serialize_candidate_detail,
     serialize_candidate_summary,
     serialize_conversation_summary,
@@ -65,7 +67,14 @@ def get_uow(db: Session = Depends(get_db)) -> UnitOfWork:
     return UnitOfWork(session=db)
 
 
-def _audit(uow: UnitOfWork, recruiter: Recruiter, entity_type: str, entity_id: str, action: str, after: dict) -> None:
+def _audit(
+    uow: UnitOfWork,
+    recruiter: Recruiter,
+    entity_type: str,
+    entity_id: str,
+    action: str,
+    after: dict,
+) -> None:
     uow.audit_events.add(
         AuditEvent(
             actor_type="recruiter",
@@ -93,14 +102,112 @@ class SearchResponse(BaseModel):
     candidates: list[dict[str, Any]]
 
 
+class BacklogResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    threshold: float
+    inactivity_days: int
+    items: list[dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# Incomplete-candidate Backlog (FLOW-039)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/backlog", response_model=BacklogResponse)
+def get_incomplete_backlog(
+    threshold: float = Query(
+        1.0,
+        ge=0.0,
+        le=1.0,
+        description="Completeness threshold below which candidates are incomplete",
+    ),
+    inactivity_days: int = Query(
+        3, ge=1, description="Minimum days of candidate silence to qualify for backlog"
+    ),
+    min_completeness: float | None = Query(
+        None, ge=0.0, le=1.0, description="Optional minimum completeness floor"
+    ),
+    assigned_recruiter_id: UUID | None = Query(None, description="Filter by assigned recruiter ID"),
+    assigned_to_me: bool = Query(
+        False, description="Filter candidates assigned to the requesting recruiter"
+    ),
+    order_by: str = Query(
+        "value_score", description="Sort order: value_score, completeness, or inactive_days"
+    ),
+    limit: int = Query(25, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    recruiter: Recruiter = Depends(get_current_recruiter),
+    uow: UnitOfWork = Depends(get_uow),
+) -> BacklogResponse:
+    """Surface pending candidate work without building a queue (FLOW-039).
+
+    Surfaces incomplete candidates (completeness < threshold) who have gone silent
+    beyond the inactivity window (inactivity_days, default 3). Excludes profile-ready,
+    blocked, or disengaged candidates.
+
+    Runs on indexed columns (completeness, last_inbound_at, lifecycle_status).
+    """
+    target_recruiter_id = recruiter.id if assigned_to_me else assigned_recruiter_id
+    params = BacklogParams(
+        completeness_threshold=threshold,
+        inactivity_days=inactivity_days,
+        min_completeness=min_completeness,
+        assigned_recruiter_id=target_recruiter_id,
+        order_by=order_by,
+        limit=limit,
+        offset=offset,
+    )
+
+    with uow:
+        rows, total = uow.backlog.get_backlog(params)
+
+        items = []
+        for row in rows:
+            skill_rows = uow.skills.get_by_candidate(row.candidate.id)
+            role_rows = uow.role_prefs.get_by_candidate(row.candidate.id)
+            loc_rows = uow.location_prefs.get_by_candidate(row.candidate.id)
+            items.append(serialize_backlog_item(row, skill_rows, role_rows, loc_rows))
+
+        _audit(
+            uow,
+            recruiter,
+            entity_type="candidate_backlog",
+            entity_id="backlog",
+            action="list_backlog",
+            after={
+                "threshold": threshold,
+                "inactivity_days": inactivity_days,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+        uow.commit()
+
+    return BacklogResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        threshold=threshold,
+        inactivity_days=inactivity_days,
+        items=items,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Search / list
 # ---------------------------------------------------------------------------
 
+
 @router.get("/candidates", response_model=SearchResponse)
 def search_candidates(
     role: str | None = Query(None, description="Substring match on current or desired role"),
-    skills: list[str] | None = Query(None, description="Any-of match on skill (repeat param for multiple)"),
+    skills: list[str] | None = Query(
+        None, description="Any-of match on skill (repeat param for multiple)"
+    ),
     location: str | None = Query(None, description="Match on a location preference"),
     work_mode: str | None = Query(None),
     lifecycle_status: LifecycleStatusEnum | None = Query(None),
@@ -145,13 +252,22 @@ def search_candidates(
             skill_rows = uow.skills.get_by_candidate(row.candidate.id)
             role_rows = uow.role_prefs.get_by_candidate(row.candidate.id)
             location_rows = uow.location_prefs.get_by_candidate(row.candidate.id)
-            candidates.append(serialize_candidate_summary(row, skill_rows, role_rows, location_rows))
+            candidates.append(
+                serialize_candidate_summary(row, skill_rows, role_rows, location_rows)
+            )
 
         _audit(
-            uow, recruiter,
-            entity_type="candidate_search", entity_id="search", action="search",
+            uow,
+            recruiter,
+            entity_type="candidate_search",
+            entity_id="search",
+            action="search",
             after={
-                "filters": {k: (v.value if hasattr(v, "value") else v) for k, v in filters.__dict__.items() if v},
+                "filters": {
+                    k: (v.value if hasattr(v, "value") else v)
+                    for k, v in filters.__dict__.items()
+                    if v
+                },
                 "result_count": len(candidates),
                 "total": total,
                 "candidate_ids": [c["candidate_id"] for c in candidates],
@@ -164,6 +280,7 @@ def search_candidates(
 # ---------------------------------------------------------------------------
 # Candidate detail
 # ---------------------------------------------------------------------------
+
 
 @router.get("/candidates/{candidate_id}")
 def get_candidate_detail(
@@ -182,18 +299,25 @@ def get_candidate_detail(
         location_rows = uow.location_prefs.get_by_candidate(candidate_id)
         current_attrs = uow.attributes.get_current_for_candidate(candidate_id)
 
-        result = serialize_candidate_detail(row, skill_rows, role_rows, location_rows, current_attrs)
+        result = serialize_candidate_detail(
+            row, skill_rows, role_rows, location_rows, current_attrs
+        )
         result["assigned_recruiter_id"] = (
-            str(row.candidate.assigned_recruiter_id) if row.candidate.assigned_recruiter_id else None
+            str(row.candidate.assigned_recruiter_id)
+            if row.candidate.assigned_recruiter_id
+            else None
         )
 
         resume = uow.resumes.get_current(candidate_id)
         result["current_resume"] = serialize_resume_metadata(resume) if resume else None
 
         _audit(
-            uow, recruiter,
-            entity_type="candidate", entity_id=str(candidate_id),
-            action="view_detail", after={"fields_returned": list(result.keys())},
+            uow,
+            recruiter,
+            entity_type="candidate",
+            entity_id=str(candidate_id),
+            action="view_detail",
+            after={"fields_returned": list(result.keys())},
         )
 
     return result
@@ -202,6 +326,7 @@ def get_candidate_detail(
 # ---------------------------------------------------------------------------
 # Conversation history
 # ---------------------------------------------------------------------------
+
 
 @router.get("/candidates/{candidate_id}/conversations")
 def list_candidate_conversations(
@@ -220,9 +345,12 @@ def list_candidate_conversations(
         }
 
         _audit(
-            uow, recruiter,
-            entity_type="candidate", entity_id=str(candidate_id),
-            action="view_conversations", after={"count": len(conversations)},
+            uow,
+            recruiter,
+            entity_type="candidate",
+            entity_id=str(candidate_id),
+            action="view_conversations",
+            after={"count": len(conversations)},
         )
 
     return result
@@ -245,9 +373,13 @@ def get_conversation_messages(
 
         conversation = uow.conversations.get_by_id(conversation_id)
         if conversation is None or conversation.candidate_id != candidate_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found"
+            )
 
-        messages, total = uow.messages.get_page_by_conversation(conversation_id, limit=limit, offset=offset)
+        messages, total = uow.messages.get_page_by_conversation(
+            conversation_id, limit=limit, offset=offset
+        )
         result = {
             "candidate_id": str(candidate_id),
             "conversation_id": str(conversation_id),
@@ -258,9 +390,12 @@ def get_conversation_messages(
         }
 
         _audit(
-            uow, recruiter,
-            entity_type="conversation", entity_id=str(conversation_id),
-            action="view_messages", after={"returned": len(messages), "total": total},
+            uow,
+            recruiter,
+            entity_type="conversation",
+            entity_id=str(conversation_id),
+            action="view_messages",
+            after={"returned": len(messages), "total": total},
         )
 
     return result
@@ -269,6 +404,7 @@ def get_conversation_messages(
 # ---------------------------------------------------------------------------
 # Resume
 # ---------------------------------------------------------------------------
+
 
 @router.get("/candidates/{candidate_id}/resume")
 def get_candidate_resume(
@@ -309,6 +445,7 @@ def get_candidate_resume(
 # Corrections — recruiter-verified data (FLOW-038)
 # ---------------------------------------------------------------------------
 
+
 class CorrectionRequest(BaseModel):
     """value must already be in the SAME canonical shape
     app.domain.policy.normalize_fact_value() produces for candidate-stated
@@ -331,6 +468,7 @@ class CorrectionRequest(BaseModel):
     downstream or is visibly wrong, which is preferable to a silent
     reinterpretation.
     """
+
     key: str
     value: Any
     raw_text: str | None = None
@@ -368,12 +506,20 @@ def correct_candidate_attribute(
         db_attrs = uow.attributes.get_all_for_candidate(candidate_id)
         existing_current = [
             Fact(
-                id=a.id, candidate_id=a.candidate_id, key=a.key, value=a.value,
-                raw_text=a.raw_text or "", source=a.source.value, confidence=a.confidence.value,
-                status=a.status.value, data_class=a.data_class.value,
-                conversation_id=a.conversation_id, created_at=a.created_at,
+                id=a.id,
+                candidate_id=a.candidate_id,
+                key=a.key,
+                value=a.value,
+                raw_text=a.raw_text or "",
+                source=a.source.value,
+                confidence=a.confidence.value,
+                status=a.status.value,
+                data_class=a.data_class.value,
+                conversation_id=a.conversation_id,
+                created_at=a.created_at,
             )
-            for a in db_attrs if a.status == AttributeStatusEnum.current
+            for a in db_attrs
+            if a.status == AttributeStatusEnum.current
         ]
         existing_for_key = next((f for f in existing_current if f.key == body.key), None)
 
@@ -403,7 +549,10 @@ def correct_candidate_attribute(
         # (rank 6) — there is no higher authority whose confirmation this
         # could need. This does not change merge_facts itself, or its
         # tested behaviour for any other caller.
-        if existing_for_key is not None and existing_for_key.source == SourceEnum.recruiter_verified.value:
+        if (
+            existing_for_key is not None
+            and existing_for_key.source == SourceEnum.recruiter_verified.value
+        ):
             accepted_directly = True
             outcome = "accepted"
         else:
@@ -414,8 +563,10 @@ def correct_candidate_attribute(
             )
             accepted_directly = any(f is incoming for f in result.accepted)
             outcome = (
-                "accepted" if accepted_directly
-                else "conflicted" if any(f is incoming for f in result.conflicted)
+                "accepted"
+                if accepted_directly
+                else "conflicted"
+                if any(f is incoming for f in result.conflicted)
                 else "ambiguous"
             )
 
@@ -428,14 +579,19 @@ def correct_candidate_attribute(
             # assignment time but return them uncoerced from the identity
             # map on a later read within the same session.
             db_attr = CandidateAttribute(
-                candidate_id=candidate_id, key=incoming.key, value=incoming.value,
-                raw_text=incoming.raw_text, source=SourceEnum(incoming.source),
+                candidate_id=candidate_id,
+                key=incoming.key,
+                value=incoming.value,
+                raw_text=incoming.raw_text,
+                source=SourceEnum(incoming.source),
                 confidence=ConfidenceEnum(incoming.confidence),
                 data_class=DataClassEnum(incoming.data_class),
                 conversation_id=incoming.conversation_id,
             )
             if existing_for_key is not None:
-                uow.attributes.supersede(old_attribute_id=existing_for_key.id, new_attribute=db_attr)
+                uow.attributes.supersede(
+                    old_attribute_id=existing_for_key.id, new_attribute=db_attr
+                )
             else:
                 uow.attributes.add(db_attr)
 
@@ -445,10 +601,17 @@ def correct_candidate_attribute(
         refreshed_attrs = uow.attributes.get_current_for_candidate(candidate_id)
         refreshed_facts = [
             Fact(
-                id=a.id, candidate_id=a.candidate_id, key=a.key, value=a.value,
-                raw_text=a.raw_text or "", source=a.source.value, confidence=a.confidence.value,
-                status=a.status.value, data_class=a.data_class.value,
-                conversation_id=a.conversation_id, created_at=a.created_at,
+                id=a.id,
+                candidate_id=a.candidate_id,
+                key=a.key,
+                value=a.value,
+                raw_text=a.raw_text or "",
+                source=a.source.value,
+                confidence=a.confidence.value,
+                status=a.status.value,
+                data_class=a.data_class.value,
+                conversation_id=a.conversation_id,
+                created_at=a.created_at,
             )
             for a in refreshed_attrs
         ]
@@ -470,9 +633,12 @@ def correct_candidate_attribute(
         sync_preference_tables(uow, candidate_id, snapshot)
 
         _audit(
-            uow, recruiter,
-            entity_type="candidate_attribute", entity_id=f"{candidate_id}:{body.key}",
-            action="correct", after={"key": body.key, "outcome": outcome},
+            uow,
+            recruiter,
+            entity_type="candidate_attribute",
+            entity_id=f"{candidate_id}:{body.key}",
+            action="correct",
+            after={"key": body.key, "outcome": outcome},
         )
 
     return {"key": body.key, "outcome": outcome, "source": SourceEnum.recruiter_verified.value}
@@ -481,6 +647,7 @@ def correct_candidate_attribute(
 # ---------------------------------------------------------------------------
 # Notes — private, never candidate-visible (FLOW-038)
 # ---------------------------------------------------------------------------
+
 
 class NoteRequest(BaseModel):
     note: str
@@ -508,9 +675,12 @@ def list_candidate_notes(
             ],
         }
         _audit(
-            uow, recruiter,
-            entity_type="candidate", entity_id=str(candidate_id),
-            action="view_notes", after={"count": len(notes)},
+            uow,
+            recruiter,
+            entity_type="candidate",
+            entity_id=str(candidate_id),
+            action="view_notes",
+            after={"count": len(notes)},
         )
     return result
 
@@ -528,9 +698,12 @@ def add_candidate_note(
             RecruiterNote(candidate_id=candidate_id, recruiter_id=recruiter.id, note=body.note)
         )
         _audit(
-            uow, recruiter,
-            entity_type="candidate", entity_id=str(candidate_id),
-            action="add_note", after={"note_id": str(note.id)},
+            uow,
+            recruiter,
+            entity_type="candidate",
+            entity_id=str(candidate_id),
+            action="add_note",
+            after={"note_id": str(note.id)},
         )
         note_id = str(note.id)
     return {"note_id": note_id}
@@ -539,6 +712,7 @@ def add_candidate_note(
 # ---------------------------------------------------------------------------
 # Assignment
 # ---------------------------------------------------------------------------
+
 
 class AssignRequest(BaseModel):
     recruiter_id: UUID | None  # null unassigns
@@ -557,15 +731,20 @@ def assign_candidate(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
 
         if body.recruiter_id is not None and uow.recruiters.get_by_id(body.recruiter_id) is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target recruiter not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Target recruiter not found"
+            )
 
         before = str(candidate.assigned_recruiter_id) if candidate.assigned_recruiter_id else None
         candidate.assigned_recruiter_id = body.recruiter_id
 
         _audit(
-            uow, recruiter,
-            entity_type="candidate", entity_id=str(candidate_id),
-            action="assign", after={"from": before, "to": str(body.recruiter_id) if body.recruiter_id else None},
+            uow,
+            recruiter,
+            entity_type="candidate",
+            entity_id=str(candidate_id),
+            action="assign",
+            after={"from": before, "to": str(body.recruiter_id) if body.recruiter_id else None},
         )
 
     return {
@@ -577,6 +756,7 @@ def assign_candidate(
 # ---------------------------------------------------------------------------
 # Recruiter account management (admin only)
 # ---------------------------------------------------------------------------
+
 
 class CreateRecruiterRequest(BaseModel):
     email: str
@@ -611,13 +791,18 @@ def create_recruiter(
 
         plaintext, key_hash = generate_api_key()
         new_recruiter = uow.recruiters.add(
-            Recruiter(email=body.email, display_name=body.display_name, role=role, api_key_hash=key_hash)
+            Recruiter(
+                email=body.email, display_name=body.display_name, role=role, api_key_hash=key_hash
+            )
         )
 
         _audit(
-            uow, admin,
-            entity_type="recruiter", entity_id=str(new_recruiter.id),
-            action="create", after={"email": body.email, "role": role.value},
+            uow,
+            admin,
+            entity_type="recruiter",
+            entity_id=str(new_recruiter.id),
+            action="create",
+            after={"email": body.email, "role": role.value},
         )
         new_id = str(new_recruiter.id)
 
@@ -638,9 +823,12 @@ def deactivate_recruiter(
         target.is_active = False
 
         _audit(
-            uow, admin,
-            entity_type="recruiter", entity_id=str(recruiter_id),
-            action="deactivate", after={"email": target.email},
+            uow,
+            admin,
+            entity_type="recruiter",
+            entity_id=str(recruiter_id),
+            action="deactivate",
+            after={"email": target.email},
         )
 
     return {"recruiter_id": str(recruiter_id), "is_active": False}

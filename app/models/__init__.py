@@ -33,6 +33,7 @@ from app.models.profile import (
     CandidateRolePref,
     CandidateSkill,
 )
+from app.models.rate_limit import RateLimitHit
 from app.models.recruiter import Recruiter, RecruiterNote
 from app.models.resume import Resume
 
@@ -62,6 +63,7 @@ __all__ = [
     "Conversation",
     "Message",
     "ModerationEvent",
+    "RateLimitHit",
     "Recruiter",
     "RecruiterNote",
     "Resume",

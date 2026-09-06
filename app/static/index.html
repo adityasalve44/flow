@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flow · WhatsApp Recruitment Assistant & Agent Cockpit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="brand-group">
+      <div class="brand-logo">
+        <span class="bolt">⚡</span>
+        <span class="brand-name">Flow<span class="highlight">.ai</span></span>
+      </div>
+      <div class="engine-badge">
+        <span class="pulse-dot"></span>
+        <span>Dual Gemini 2.5 Flash Engine Active</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btn-new-candidate" class="btn btn-secondary">
+        <span class="icon">＋</span> New Candidate
+      </button>
+      <button id="btn-refresh-inspector" class="btn btn-secondary" title="Refresh live data">
+        <span class="icon">⟳</span> Refresh State
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Split Workspace -->
+  <main class="workspace-grid">
+    <!-- LEFT PANEL: WhatsApp Channel Simulator -->
+    <section class="simulator-card" aria-label="WhatsApp Simulator">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>Channel Simulator</h2>
+          <span class="sub-label">Simulating Meta WhatsApp Cloud API</span>
+        </div>
+        <div class="persona-selector-wrap">
+          <label for="persona-select">Persona:</label>
+          <select id="persona-select" class="form-select">
+            <option value="custom">Custom / Fresh</option>
+            <option value="experienced_dev">Experienced Senior Dev</option>
+            <option value="junior_dev">Junior Developer</option>
+            <option value="evasive">Evasive / Deflecting</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Phone Frame Container -->
+      <div class="phone-container">
+        <!-- WhatsApp Header -->
+        <div class="wa-header">
+          <div class="wa-avatar">
+            <span class="avatar-icon">👤</span>
+            <span class="online-indicator"></span>
+          </div>
+          <div class="wa-contact-info">
+            <div class="contact-name" id="wa-contact-name">Candidate</div>
+            <div class="contact-status" id="wa-contact-phone">+91 98765 43210</div>
+          </div>
+          <div class="wa-header-actions">
+            <span class="pill-mode" id="badge-mode">consent</span>
+          </div>
+        </div>
+
+        <!-- Chat Conversation Area -->
+        <div class="chat-thread" id="chat-thread">
+          <div class="chat-timestamp-badge">Today</div>
+          <!-- Messages will be rendered here dynamically -->
+        </div>
+
+        <!-- Thinking Indicator -->
+        <div class="thinking-bubble" id="thinking-bubble" style="display: none;">
+          <div class="agent-avatar">⚡</div>
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="thinking-text" id="thinking-text">Extractor & Policy analyzing turn...</span>
+        </div>
+
+        <!-- Quick Prompts Pill Bar -->
+        <div class="quick-prompts-bar" id="quick-prompts-bar">
+          <button class="prompt-chip" data-text="Hi! I am looking for software engineering roles.">👋 Hi</button>
+          <button class="prompt-chip" data-text="Yes, I consent to store my professional profile.">✅ I consent</button>
+          <button class="prompt-chip" data-text="I am a Senior Backend Developer with 5 years experience in Python and PostgreSQL, looking for remote roles in Bengaluru at 28 LPA with 30 days notice.">💼 Full Intro</button>
+          <button class="prompt-chip" data-text="My expected CTC is 32 LPA and I can join in 15 days.">💰 CTC & Notice</button>
+          <button class="prompt-chip" data-text="Why do you need my current salary? I prefer not to share.">❓ Refuse / Deflect</button>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="wa-input-bar">
+          <textarea
+            id="message-input"
+            class="wa-input"
+            placeholder="Type a message (Enter to send)..."
+            rows="1"
+          ></textarea>
+          <button id="send-btn" class="wa-send-btn" aria-label="Send message">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Live Brain & Data Inspector Cockpit -->
+    <section class="inspector-card" aria-label="Agent Brain & Data Inspector">
+      <!-- Cockpit Top Bar -->
+      <div class="cockpit-bar">
+        <div class="candidate-overview">
+          <div class="candidate-meta">
+            <span class="label">Candidate ID:</span>
+            <code class="candidate-id" id="insp-candidate-id">Loading...</code>
+          </div>
+          <div class="badge-row">
+            <span class="badge badge-lifecycle" id="badge-lifecycle">new</span>
+            <span class="badge badge-consent" id="badge-consent">pending</span>
+          </div>
+        </div>
+
+        <!-- Profile Completeness Score Card -->
+        <div class="completeness-score-card">
+          <div class="score-header">
+            <span class="score-title">Profile Completeness</span>
+            <span class="score-percentage" id="completeness-num">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="completeness-bar" style="width: 0%;"></div>
+          </div>
+          <div class="score-subtext" id="completeness-status">Missing 6 core baseline fields</div>
+        </div>
+      </div>
+
+      <!-- Tabbed Cockpit Content -->
+      <div class="inspector-tabs">
+        <button class="tab-btn active" data-tab="tab-intelligence">⚡ Turn Intelligence</button>
+        <button class="tab-btn" data-tab="tab-profile">📋 Profile Projection</button>
+        <button class="tab-btn" data-tab="tab-attributes">🔍 Attribute Store (<span id="attr-count">0</span>)</button>
+        <button class="tab-btn" data-tab="tab-preferences">🏷️ Skills & Preferences</button>
+        <button class="tab-btn" data-tab="tab-backlog">⏳ Backlog View (FLOW-039)</button>
+      </div>
+
+      <div class="tab-viewport">
+        <!-- TAB 1: Turn Intelligence & Policy Decisions -->
+        <div class="tab-content active" id="tab-intelligence">
+          <div class="intelligence-grid">
+            <div class="metric-card">
+              <div class="metric-title">Active Directive Ladder Rung</div>
+              <div class="directive-display" id="metric-directive">consent_gate</div>
+              <p class="metric-desc" id="metric-directive-desc">Enforcing explicit WhatsApp consent before storing facts.</p>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Conversation Mode</div>
+              <div class="metric-value" id="metric-mode">consent</div>
+              <p class="metric-desc">Modes: consent → intake → refresh</p>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Deflection Counter</div>
+              <div class="metric-value" id="metric-deflections">0 / 2</div>
+              <p class="metric-desc">3 consecutive refusals trigger disengage_silent</p>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Abuse Counter</div>
+              <div class="metric-value" id="metric-abuse">0 / 2</div>
+              <p class="metric-desc">Abusive messages trigger safety boundaries</p>
+            </div>
+          </div>
+
+          <div class="section-block">
+            <h3 class="section-title">Last Agent Turn Telemetry</h3>
+            <div class="telemetry-box" id="telemetry-box">
+              <div class="telemetry-line"><span class="t-key">Status:</span> <span id="t-status">Awaiting message</span></div>
+              <div class="telemetry-line"><span class="t-key">Ingress Decision:</span> <span id="t-decision">None</span></div>
+              <div class="telemetry-line"><span class="t-key">Inbound Message ID:</span> <code id="t-msg-id">-</code></div>
+              <div class="telemetry-line"><span class="t-key">Conversation ID:</span> <code id="t-conv-id">-</code></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: Operational Profile Projection -->
+        <div class="tab-content" id="tab-profile">
+          <p class="tab-explainer">
+            <strong>CandidateProfile Projection</strong>: Derived table of current, confirmed operational facts (NUMERIC currency, never floats). Never written by hand.
+          </p>
+          <div class="profile-grid" id="profile-grid">
+            <div class="profile-card">
+              <span class="field-label">Full Name</span>
+              <span class="field-value" id="prof-full_name">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Current Role</span>
+              <span class="field-value" id="prof-current_role">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Current Company</span>
+              <span class="field-value" id="prof-current_company">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Experience</span>
+              <span class="field-value" id="prof-experience_years">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Current CTC</span>
+              <span class="field-value" id="prof-current_ctc">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Expected CTC</span>
+              <span class="field-value" id="prof-expected_ctc">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Notice Period</span>
+              <span class="field-value" id="prof-notice_period">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Work Mode</span>
+              <span class="field-value" id="prof-work_mode">-</span>
+            </div>
+            <div class="profile-card">
+              <span class="field-label">Education</span>
+              <span class="field-value" id="prof-education">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: Extracted Attribute Store (Provenance) -->
+        <div class="tab-content" id="tab-attributes">
+          <p class="tab-explainer">
+            <strong>Attribute Store</strong>: Complete audit trail with provenance (source, confidence, status, data_class). Protected keys never leak to recruiter search.
+          </p>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Value</th>
+                  <th>Source</th>
+                  <th>Confidence</th>
+                  <th>Status</th>
+                  <th>Class</th>
+                </tr>
+              </thead>
+              <tbody id="attr-table-body">
+                <tr><td colspan="6" class="empty-state">No attributes extracted yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 4: Preferences & Multi-value Index Tables -->
+        <div class="tab-content" id="tab-preferences">
+          <div class="preference-section">
+            <h3 class="section-title">Verified Skills (candidate_skills)</h3>
+            <div class="tag-cloud" id="skills-cloud">
+              <span class="empty-tag">No skills captured yet</span>
+            </div>
+          </div>
+
+          <div class="preference-section">
+            <h3 class="section-title">Desired Roles (candidate_role_prefs)</h3>
+            <div class="tag-cloud" id="roles-cloud">
+              <span class="empty-tag">No role preferences captured yet</span>
+            </div>
+          </div>
+
+          <div class="preference-section">
+            <h3 class="section-title">Location Preferences (candidate_location_prefs)</h3>
+            <div class="tag-cloud" id="locations-cloud">
+              <span class="empty-tag">No location preferences captured yet</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: Incomplete Backlog View (FLOW-039) -->
+        <div class="tab-content" id="tab-backlog">
+          <div class="backlog-header">
+            <div>
+              <h3 class="section-title">Incomplete-Candidate Backlog (FLOW-039)</h3>
+              <p class="tab-explainer">
+                Querying <code>/recruiter/backlog</code>: candidates with <code>completeness &lt; 1.0</code>, inactive beyond 3 days, not disengaged or blocked, ordered by value score.
+              </p>
+            </div>
+            <button id="btn-refresh-backlog" class="btn btn-secondary">⟳ Reload Backlog</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Role</th>
+                  <th>Completeness</th>
+                  <th>Days Inactive</th>
+                  <th>Value Score</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="backlog-table-body">
+                <tr><td colspan="6" class="empty-state">Loading backlog view...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -58,10 +58,12 @@ class LocalStorageAdapter:
 
         # Local pseudo-signature for tests
         sig = f"local_sig_{clean_key}_{expires_at}"
-        query = urllib.parse.urlencode({
-            "token": sig,
-            "expires_at": expires_at,
-        })
+        query = urllib.parse.urlencode(
+            {
+                "token": sig,
+                "expires_at": expires_at,
+            }
+        )
         return f"file://{dest_path.as_posix()}?{query}"
 
     def get(self, object_key: str) -> bytes:
@@ -69,7 +71,9 @@ class LocalStorageAdapter:
         clean_key = object_key.lstrip("/").replace("\\", "/")
         target_path = self.bucket_dir / clean_key
         if not target_path.exists():
-            raise FileNotFoundError(f"Object '{object_key}' does not exist in bucket '{self.bucket}'.")
+            raise FileNotFoundError(
+                f"Object '{object_key}' does not exist in bucket '{self.bucket}'."
+            )
         with open(target_path, "rb") as f:
             return f.read()
 

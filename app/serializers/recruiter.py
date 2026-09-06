@@ -99,8 +99,7 @@ def serialize_candidate_summary(
         "skills": sorted({s.skill_raw for s in (skills or [])}),
         "desired_roles": sorted({r.role_raw for r in (desired_roles or [])}),
         "locations": [
-            {"location": loc.location_raw, "strength": loc.strength}
-            for loc in (locations or [])
+            {"location": loc.location_raw, "strength": loc.strength} for loc in (locations or [])
         ],
     }
     return out
@@ -190,4 +189,32 @@ def serialize_search_response(
             serialize_candidate_summary(row, skills, roles, locs)
             for row, skills, roles, locs in rows_with_prefs
         ],
+    }
+
+
+def serialize_backlog_item(
+    row: Any,
+    skills: list[CandidateSkill] | None = None,
+    desired_roles: list[CandidateRolePref] | None = None,
+    locations: list[CandidateLocationPref] | None = None,
+) -> dict[str, Any]:
+    """Serialize an incomplete candidate in the recruiter backlog view.
+    Emits operational fields, calculated value score, and inactivity metrics."""
+    c = row.candidate
+    return {
+        "candidate_id": str(c.id),
+        "phone_number": c.phone_number,
+        "lifecycle_status": c.lifecycle_status.value,
+        "consent_status": c.consent_status.value,
+        "created_at": _iso(c.created_at),
+        **_profile_fields(row.profile),
+        "skills": sorted({s.skill_raw for s in (skills or [])}),
+        "desired_roles": sorted({r.role_raw for r in (desired_roles or [])}),
+        "locations": sorted({loc.location_raw for loc in (locations or [])}),
+        "assigned_recruiter_id": (
+            str(c.assigned_recruiter_id) if c.assigned_recruiter_id else None
+        ),
+        "last_inbound_at": _iso(row.last_inbound_at),
+        "days_inactive": row.days_inactive,
+        "value_score": row.value_score,
     }

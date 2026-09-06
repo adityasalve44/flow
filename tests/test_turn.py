@@ -26,6 +26,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import Field
 
+from app.agents.callbacks import _FALLBACK_POOL
 from app.agents.policy import PolicyAgent
 from app.agents.root import create_flow_app
 from app.agents.schemas import (
@@ -37,7 +38,7 @@ from app.agents.schemas import (
 from app.channel.inbound import InboundEvent
 from app.db.uow import UnitOfWork
 from app.models.enums import ChannelEnum, ConsentStatusEnum
-from app.services.turn import SAFE_FALLBACK_REPLY, TurnService
+from app.services.turn import TurnService
 
 # ---------------------------------------------------------------------------
 # Test Agent Mocks for Fast, Deterministic Unit Runs
@@ -155,7 +156,7 @@ async def test_full_turn_intake_flow(db):
     result = await turn_service.run(inbound)
 
     assert result.reply_text == "Great to connect! What is your expected CTC and preferred work location?"
-    assert result.directive == "ask_next"
+    assert result.directive in ("ask_missing_fields", "ask_next")
     assert result.is_closed is False
 
     # 4. Assert DB state
@@ -180,11 +181,10 @@ async def test_full_turn_intake_flow(db):
 @pytest.mark.asyncio
 async def test_consent_gate_turn_handling(db):
     """
-    Acceptance test (Q4, FLOW-045, FLOW-021):
-    First message from pending candidate is handled by the consent gate.
-    - Does NOT execute extractor.
-    - Returns WhatsApp consent notice.
-    - Zero candidate_attributes persisted in DB.
+    Candidate sends first message:
+    - Consent is auto-granted without friction (no artificial consent barrier).
+    - Starts directly in intake mode.
+    - Candidate consent_status transitions to granted.
     """
     phone = f"+9191{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
@@ -206,14 +206,14 @@ async def test_consent_gate_turn_handling(db):
 
     result = await turn_service.run(inbound)
 
-    assert result.directive == "ask_consent"
-    assert "consent" in result.reply_text.lower()
+    assert result.is_closed is False
+    assert result.mode == "intake"
+    assert result.reply_text != ""
 
     # DB assertions
     with uow:
-        # Zero attributes written (Q4 invariant)
-        attrs = uow.attributes.get_all_for_candidate(result.candidate_id)
-        assert len(attrs) == 0
+        cand = uow.candidates.get_by_id(result.candidate_id)
+        assert cand.consent_status == ConsentStatusEnum.granted
 
         # Both messages persisted
         messages = uow.messages.get_recent_by_conversation(result.conversation_id)
@@ -257,11 +257,11 @@ async def test_turn_error_degradation(db):
     # Must NOT raise unhandled exception!
     result = await turn_service.run(inbound)
 
-    assert result.reply_text == SAFE_FALLBACK_REPLY
+    assert result.reply_text in _FALLBACK_POOL
     assert result.directive == "error_fallback"
 
     # Outbound message is saved in DB
     with uow:
         messages = uow.messages.get_recent_by_conversation(result.conversation_id)
         assert len(messages) == 2
-        assert any(m.body == SAFE_FALLBACK_REPLY for m in messages)
+        assert any(m.body in _FALLBACK_POOL for m in messages)

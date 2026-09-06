@@ -18,7 +18,6 @@ from enum import Enum
 
 from app.agents.prompts.consent import (
     CONSENT_DECLINED_REPLY,
-    CONSENT_REASK_NOTICE,
     CONSENT_WITHDRAWN_REPLY,
 )
 from app.models import Candidate, Conversation
@@ -85,6 +84,14 @@ WITHDRAW_PHRASES: frozenset[str] = frozenset({
     "remove my info",
     "delete my details",
     "withdraw my application",
+    "delete everything",
+    "delete all my data",
+    "stop contacting me and delete everything",
+    "erase my data",
+    "erase everything",
+    "forget me",
+    "forget my data",
+    "remove everything",
 })
 
 
@@ -178,39 +185,8 @@ def evaluate_consent_turn(
             should_invoke_extractor=False,
         )
 
-    # 3. If candidate already has granted consent: pass through to normal pipeline
-    if candidate.consent_status == ConsentStatusEnum.granted:
-        return ConsentDecision(
-            intent=ConsentIntent.GRANT,
-            directive="continue",
-            reply_text="",
-            should_invoke_extractor=True,
-        )
-
-    # 4. Candidate is PENDING consent: evaluate response
-    if intent == ConsentIntent.GRANT:
-        # Candidate opted in!
-        candidate.consent_status = ConsentStatusEnum.granted
-        candidate.consent_at = current_time
-        candidate.consent_message_id = channel_message_id
-        conversation.mode = ConversationModeEnum.intake
-        if candidate.lifecycle_status == LifecycleStatusEnum.new:
-            from app.domain.lifecycle import transition_candidate_lifecycle
-            transition_candidate_lifecycle(
-                candidate=candidate,
-                target_status=LifecycleStatusEnum.intake,
-                reason="consent_granted",
-                now=current_time,
-            )
-        return ConsentDecision(
-            intent=ConsentIntent.GRANT,
-            directive="consent_granted",
-            reply_text="Thank you! To help find the right opportunities, what role or position are you looking for?",
-            should_invoke_extractor=False,
-        )
-
+    # 3. Explicit refusal: candidate explicitly opts out
     if intent == ConsentIntent.REFUSE:
-        # Candidate declined
         candidate.consent_status = ConsentStatusEnum.declined
         conversation.status = ConversationStatusEnum.closed
         conversation.closed_at = current_time
@@ -221,11 +197,26 @@ def evaluate_consent_turn(
             should_invoke_extractor=False,
         )
 
-    # Intent is NEITHER: Candidate ignored consent or sent other information
-    # Facts in that message must NOT be persisted (Q4). Re-ask consent.
+    # 4. Seamless intake: auto-grant consent without friction
+    if candidate.consent_status != ConsentStatusEnum.granted:
+        candidate.consent_status = ConsentStatusEnum.granted
+        candidate.consent_at = candidate.consent_at or current_time
+        candidate.consent_message_id = channel_message_id
+        if candidate.lifecycle_status == LifecycleStatusEnum.new:
+            from app.domain.lifecycle import transition_candidate_lifecycle
+            transition_candidate_lifecycle(
+                candidate=candidate,
+                target_status=LifecycleStatusEnum.intake,
+                reason="intake_started",
+                now=current_time,
+            )
+
+    if conversation.mode == ConversationModeEnum.consent:
+        conversation.mode = ConversationModeEnum.intake
+
     return ConsentDecision(
-        intent=ConsentIntent.NEITHER,
-        directive="ask_consent",
-        reply_text=CONSENT_REASK_NOTICE,
-        should_invoke_extractor=False,
+        intent=ConsentIntent.GRANT,
+        directive="continue",
+        reply_text="",
+        should_invoke_extractor=True,
     )

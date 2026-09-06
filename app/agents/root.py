@@ -38,9 +38,7 @@ def create_flow_agent(
     replier_tools = FLOW_V1_TOOLS if tools is None else tools
     extractor = custom_extractor or create_extractor_agent(model=extractor_model)
     policy = custom_policy or PolicyAgent(session_factory=session_factory)
-    replier = custom_replier or create_reply_agent(
-        model=replier_model, tools=replier_tools
-    )
+    replier = custom_replier or create_reply_agent(model=replier_model, tools=replier_tools)
 
     return SequentialAgent(
         name="flow_pipeline",
@@ -58,9 +56,11 @@ def create_flow_app(
     custom_extractor: BaseAgent | None = None,
     custom_policy: BaseAgent | None = None,
     custom_replier: BaseAgent | None = None,
+    plugins: list[Any] | None = None,
 ) -> App:
     """
     Construct the top-level ADK App containing the Flow SequentialAgent.
+    Wires FlowObservabilityPlugin by default for OpenTelemetry tracing and cost accounting.
     Optionally enables events_compaction_config for long conversations (FLOW-031).
     """
     root_agent = create_flow_agent(
@@ -72,7 +72,17 @@ def create_flow_app(
         custom_policy=custom_policy,
         custom_replier=custom_replier,
     )
-    app_kwargs: dict[str, Any] = {"name": app_name, "root_agent": root_agent}
+
+    if plugins is None:
+        from app.observability.plugin import FlowObservabilityPlugin
+
+        plugins = [FlowObservabilityPlugin()]
+
+    app_kwargs: dict[str, Any] = {
+        "name": app_name,
+        "root_agent": root_agent,
+        "plugins": plugins,
+    }
     if events_compaction_config is not None:
         app_kwargs["events_compaction_config"] = events_compaction_config
 

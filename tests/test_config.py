@@ -3,8 +3,6 @@ tests/test_config.py — settings module unit tests.
 No database required.
 """
 
-
-
 from app.config import Settings, get_settings
 
 
@@ -22,8 +20,8 @@ def test_defaults_from_env(monkeypatch):
     assert s.active_window_hours == 24
     assert s.stale_profile_days == 365
     assert s.max_deflections == 2
-    assert s.extractor_model == "gemini-2.5-flash"
-    assert s.replier_model == "gemini-2.5-flash"
+    assert s.extractor_model == "gemini-3.6-flash"
+    assert s.replier_model == "gemini-3.6-flash"
     assert s.env == "development"
 
 

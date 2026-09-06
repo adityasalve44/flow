@@ -57,12 +57,12 @@
 
 - `[x]` **FLOW-037** — Recruiter read API with three-class filtering
 - `[x]` **FLOW-038** — Recruiter identity, roles and verification
-- `[ ]` **FLOW-039** — Incomplete-candidate backlog view
-- `[ ]` **FLOW-040** — Observability
+- `[x]` **FLOW-039** — Incomplete-candidate backlog view
+- `[x]` **FLOW-040** — Observability
 
 ## Phase 6 · Production
 
-- `[ ]` **FLOW-041** — WhatsApp channel adapter
-- `[ ]` **FLOW-042** — Rate limiting and replay protection
-- `[ ]` **FLOW-043** — Retention, deletion and consent
-- `[ ]` **FLOW-044** — Production hardening
+- `[x]` **FLOW-041** — WhatsApp channel adapter
+- `[x]` **FLOW-042** — Rate limiting and replay protection
+- `[x]` **FLOW-043** — Retention, deletion and consent
+- `[x]` **FLOW-044** — Production hardening

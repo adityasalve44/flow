@@ -12,7 +12,6 @@ from app.db.uow import UnitOfWork
 from app.models import Candidate, Conversation
 from app.models.enums import (
     ChannelEnum,
-    ConsentStatusEnum,
     ConversationModeEnum,
     ConversationStatusEnum,
 )
@@ -70,11 +69,9 @@ def resolve_conversation(
         mode = ConversationModeEnum.refresh
         from app.domain.staleness import mark_candidate_profile_stale
         mark_candidate_profile_stale(uow, candidate, now=current_time)
-    elif candidate.consent_status == ConsentStatusEnum.granted:
-        mode = ConversationModeEnum.intake
     else:
-        # Consent not yet granted
-        mode = ConversationModeEnum.consent
+        # Open directly in intake mode
+        mode = ConversationModeEnum.intake
 
     # Create new conversation
     new_conv = uow.conversations.create(

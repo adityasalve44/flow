@@ -93,6 +93,9 @@ def get_missing_blocking_fields(
         if status == AttributeStatusEnum.current.value and conf == ConfidenceEnum.confirmed.value:
             confirmed_current_keys.add(attr.key)
 
+    if "current_role" in confirmed_current_keys:
+        confirmed_current_keys.add("desired_role")
+
     return [k for k in sorted(BLOCKING_KEYS) if k not in confirmed_current_keys]
 
 

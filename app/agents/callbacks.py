@@ -13,6 +13,7 @@ Core requirements (§8, FLOW-024 of REVIEW_AND_PLAN.md):
 """
 
 import math
+import random
 import re
 import time
 from typing import Any
@@ -27,10 +28,23 @@ from app.logging import get_logger
 
 logger = get_logger(__name__)
 
-SAFE_FALLBACK_REPLY = (
-    "Thanks for your message! We're experiencing a brief technical delay on our end. "
-    "Please send your message again in a moment."
-)
+# Pool of warm, naturally varied recovery messages.
+# Randomly selected on model error so repeated errors never look copy-pasted.
+_FALLBACK_POOL: list[str] = [
+    "Sorry about the brief pause on my end! Reviewing your details now.",
+    "Had a momentary connection hiccup on my side — picking your details right up.",
+    "Apologies for the brief delay on my end, just going through what you shared.",
+    "Sorry for the short wait! Going over your details right now.",
+]
+
+
+def _get_fallback_reply() -> str:
+    """Return a random warm fallback message from the pool."""
+    return random.choice(_FALLBACK_POOL)
+
+
+# Retain the constant name for any external references.
+SAFE_FALLBACK_REPLY = _FALLBACK_POOL[0]
 
 # Maximum allowed text length for any individual input part (4KB)
 MAX_INPUT_TEXT_LENGTH = 4096
@@ -191,10 +205,27 @@ def on_model_error_callback(
         exc_info=True,
     )
 
-    # Return safe degradation response
+    has_schema = False
+    agent_name = getattr(callback_context, "agent_name", "")
+    if agent_name == "extractor" or hasattr(callback_context, "agent") and getattr(callback_context.agent, "output_schema", None) or getattr(llm_request, "config", None) and (
+        getattr(llm_request.config, "response_schema", None) is not None
+        or getattr(llm_request.config, "response_mime_type", "") == "application/json"
+    ):
+        has_schema = True
+
+    if has_schema:
+        # Schema-constrained agent (e.g. extractor): return valid empty JSON object
+        return LlmResponse(
+            content=types.Content(
+                role="model",
+                parts=[types.Part.from_text(text="{}")],
+            )
+        )
+
+    # Free-form text agent (e.g. replier): return a warm, randomly-varied degradation response
     return LlmResponse(
         content=types.Content(
             role="model",
-            parts=[types.Part.from_text(text=SAFE_FALLBACK_REPLY)],
+            parts=[types.Part.from_text(text=_get_fallback_reply())],
         )
     )
