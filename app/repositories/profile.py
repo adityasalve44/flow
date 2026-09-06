@@ -32,3 +32,5 @@ class ProfileRepository:
         self.session.add(profile)
         self.session.flush()
         return profile
+
+    save = add

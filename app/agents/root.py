@@ -17,6 +17,7 @@ from google.adk.apps import App
 from app.agents.extraction import create_extractor_agent
 from app.agents.policy import PolicyAgent
 from app.agents.reply import create_reply_agent
+from app.tools import FLOW_V1_TOOLS
 
 FLOW_APP_NAME = "flow"
 
@@ -34,9 +35,12 @@ def create_flow_agent(
     Construct the 3-stage SequentialAgent pipeline.
     Allows injecting custom/mock sub-agents for testing or instrumentation.
     """
+    replier_tools = FLOW_V1_TOOLS if tools is None else tools
     extractor = custom_extractor or create_extractor_agent(model=extractor_model)
     policy = custom_policy or PolicyAgent(session_factory=session_factory)
-    replier = custom_replier or create_reply_agent(model=replier_model, tools=tools)
+    replier = custom_replier or create_reply_agent(
+        model=replier_model, tools=replier_tools
+    )
 
     return SequentialAgent(
         name="flow_pipeline",
