@@ -65,7 +65,14 @@ def test_engine():
     engine = create_engine(db_url, pool_pre_ping=True)
 
     with engine.begin() as conn:
-        Base.metadata.drop_all(conn)
+        # Drop all known tables with CASCADE to handle cross-references
+        # from legacy schema runs.
+        conn.execute(
+            __import__("sqlalchemy").text(
+                "DROP SCHEMA public CASCADE; CREATE SCHEMA public; "
+                "CREATE SCHEMA IF NOT EXISTS flow;"
+            )
+        )
         Base.metadata.create_all(conn)
 
     yield engine
@@ -108,7 +115,7 @@ class CandidateFactory:
         cls._counter += 1
         defaults = dict(
             phone_number=f"+9190000{cls._counter:05d}",
-            name=f"Test Candidate {cls._counter}",
+            display_name=f"Test Candidate {cls._counter}",
         )
         defaults.update(kwargs)
         candidate = Candidate(**defaults)
@@ -121,14 +128,12 @@ class ConversationFactory:
     _counter = 0
 
     @classmethod
-    def build(cls, db: Session, candidate_id: int, **kwargs):
+    def build(cls, db: Session, candidate_id, **kwargs):
         from app.models import Conversation
 
         cls._counter += 1
         defaults = dict(
             candidate_id=candidate_id,
-            direction="inbound",
-            message=f"Test message {cls._counter}",
         )
         defaults.update(kwargs)
         conv = Conversation(**defaults)

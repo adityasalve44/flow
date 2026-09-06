@@ -1,43 +1,32 @@
+"""
+app/main.py — FastAPI application entry point.
+
+This is a placeholder until FLOW-023 (webhook rewrite).
+The full webhook will be implemented with proper ingress, auth and agent wiring.
+"""
+
 from fastapi import FastAPI
-from pydantic import BaseModel
 
-from app.database import SessionLocal
-from app.repositories.candidate import get_or_create_candidate
-from app.repositories.conversation import save_message
+from app.api.middleware import RequestCorrelationMiddleware
+from app.logging import configure_logging, get_logger
 
-
-app = FastAPI(
-    title="Flow",
-    version="0.1.0",
-)
+configure_logging()
+logger = get_logger(__name__)
 
 
-class IncomingMessage(BaseModel):
-    phone_number: str
-    message: str
+def create_app() -> FastAPI:
+    application = FastAPI(
+        title="Flow",
+        version="0.1.0",
+        description="AI-powered WhatsApp recruitment intake assistant",
+    )
+    application.add_middleware(RequestCorrelationMiddleware)
+    return application
 
 
-@app.post("/webhook")
-def receive_message(payload: IncomingMessage):
+app = create_app()
 
-    with SessionLocal() as db:
 
-        candidate, created = get_or_create_candidate(
-            db,
-            payload.phone_number,
-        )
-
-        save_message(
-            db,
-            candidate.id,
-            payload.message,
-            "incoming",
-        )
-
-    return {
-        "success": True,
-        "candidate_id": candidate.id,
-        "new_candidate": created,
-        "phone_number": candidate.phone_number,
-        "message": payload.message,
-    }
+@app.get("/health")
+def health():
+    return {"status": "ok"}

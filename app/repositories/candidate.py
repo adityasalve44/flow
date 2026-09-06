@@ -1,61 +1,28 @@
+"""
+app/repositories/candidate.py — read-only candidate data access.
+
+IMPORTANT: No commit() calls here. The service layer (UnitOfWork) owns
+all transactions.  These functions only read and stage (flush) — they
+never commit.
+"""
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import (
-    Candidate,
-    CandidateProfile,
-    CandidateSkill,
-    CandidateRole,
-    CandidateLocation,
-)
+from app.models import Candidate
 
 
 def get_candidate_by_phone(
     db: Session,
     phone_number: str,
 ) -> Candidate | None:
-    statement = (
-        select(Candidate)
-        .where(Candidate.phone_number == phone_number)
-    )
-
+    statement = select(Candidate).where(Candidate.phone_number == phone_number)
     return db.scalar(statement)
 
 
-def create_candidate(
+def get_candidate_by_id(
     db: Session,
-    phone_number: str,
-    name: str | None = None,
-) -> Candidate:
-    candidate = Candidate(
-        phone_number=phone_number,
-        name=name,
-    )
-
-    db.add(candidate)
-    db.flush()
-
-    return candidate
-
-
-def get_or_create_candidate(
-    db: Session,
-    phone_number: str,
-) -> tuple[Candidate, bool]:
-
-    candidate = get_candidate_by_phone(
-        db,
-        phone_number,
-    )
-
-    if candidate:
-        return candidate, False
-
-    candidate = create_candidate(
-        db,
-        phone_number,
-    )
-
-    db.commit()
-
-    return candidate, True
+    candidate_id,
+) -> Candidate | None:
+    statement = select(Candidate).where(Candidate.id == candidate_id)
+    return db.scalar(statement)

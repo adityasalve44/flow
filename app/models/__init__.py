@@ -1,0 +1,47 @@
+"""
+app/models/__init__.py — re-exports all models and the shared Base.
+
+Import from here to get everything:
+    from app.models import Base, Candidate, Conversation, Message
+"""
+
+from app.models.base import Base, TimestampMixin
+from app.models.enums import (
+    AttributeStatusEnum,
+    ChannelEnum,
+    ConfidenceEnum,
+    ConsentStatusEnum,
+    ConversationModeEnum,
+    ConversationStatusEnum,
+    DataClassEnum,
+    DirectionEnum,
+    LifecycleStatusEnum,
+    SourceEnum,
+)
+from app.models.candidate import (
+    Candidate,
+    CandidateProfile,
+    Conversation,
+    Message,
+)
+
+__all__ = [
+    "Base",
+    "TimestampMixin",
+    # Enums
+    "AttributeStatusEnum",
+    "ChannelEnum",
+    "ConfidenceEnum",
+    "ConsentStatusEnum",
+    "ConversationModeEnum",
+    "ConversationStatusEnum",
+    "DataClassEnum",
+    "DirectionEnum",
+    "LifecycleStatusEnum",
+    "SourceEnum",
+    # Models
+    "Candidate",
+    "CandidateProfile",
+    "Conversation",
+    "Message",
+]
