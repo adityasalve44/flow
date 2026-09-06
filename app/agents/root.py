@@ -54,12 +54,14 @@ def create_flow_app(
     replier_model: str | None = None,
     tools: list[Any] | None = None,
     app_name: str = FLOW_APP_NAME,
+    events_compaction_config: Any | None = None,
     custom_extractor: BaseAgent | None = None,
     custom_policy: BaseAgent | None = None,
     custom_replier: BaseAgent | None = None,
 ) -> App:
     """
     Construct the top-level ADK App containing the Flow SequentialAgent.
+    Optionally enables events_compaction_config for long conversations (FLOW-031).
     """
     root_agent = create_flow_agent(
         session_factory=session_factory,
@@ -70,4 +72,8 @@ def create_flow_app(
         custom_policy=custom_policy,
         custom_replier=custom_replier,
     )
-    return App(name=app_name, root_agent=root_agent)
+    app_kwargs: dict[str, Any] = {"name": app_name, "root_agent": root_agent}
+    if events_compaction_config is not None:
+        app_kwargs["events_compaction_config"] = events_compaction_config
+
+    return App(**app_kwargs)

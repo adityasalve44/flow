@@ -53,6 +53,19 @@ class ConversationRepository:
         )
         return self.session.scalar(statement)
 
+    def get_by_candidate(
+        self,
+        candidate_id: UUID | str,
+        limit: int = 10,
+        status: ConversationStatusEnum | None = None,
+    ) -> list[Conversation]:
+        """Fetch conversations for a candidate ordered from newest to oldest."""
+        statement = select(Conversation).where(Conversation.candidate_id == candidate_id)
+        if status is not None:
+            statement = statement.where(Conversation.status == status)
+        statement = statement.order_by(Conversation.started_at.desc()).limit(limit)
+        return list(self.session.scalars(statement).all())
+
     def create(
         self,
         candidate_id: UUID | str,
@@ -107,6 +120,17 @@ class MessageRepository:
 
     # Alias for readability
     get_recent_by_conversation = get_recent
+
+    def get_all_by_conversation(
+        self, conversation_id: UUID | str
+    ) -> list[Message]:
+        """Fetch all messages for a conversation ordered chronologically."""
+        statement = (
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.asc(), Message.id.asc())
+        )
+        return list(self.session.scalars(statement).all())
 
     def create(
         self,

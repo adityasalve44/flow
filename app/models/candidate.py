@@ -186,6 +186,7 @@ class Conversation(Base, TimestampMixin):
     abuse_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     candidate: Mapped["Candidate"] = relationship(
         "Candidate",

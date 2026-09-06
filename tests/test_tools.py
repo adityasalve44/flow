@@ -237,6 +237,10 @@ def test_explain_recruitment_term_unknown_term():
 
 def test_flow_v1_tools_list():
     """Verify FLOW_V1_TOOLS contains the expected safe tool callables."""
-    assert len(FLOW_V1_TOOLS) == 2
+    assert len(FLOW_V1_TOOLS) == 3
     tool_names = {t.__name__ for t in FLOW_V1_TOOLS}
-    assert tool_names == {"get_candidate_snapshot", "explain_recruitment_term"}
+    assert tool_names == {
+        "get_candidate_snapshot",
+        "explain_recruitment_term",
+        "recall_candidate_history",
+    }
