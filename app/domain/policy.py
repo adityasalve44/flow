@@ -76,6 +76,68 @@ class PolicyDirective:
         return asdict(self)
 
 
+def _preference_dedup_key(text: str) -> str:
+    """Lowercase, whitespace-collapsed dedup key for skill/role/location norm columns.
+
+    "Backend Developer" -> "backend_developer", "Python" -> "python",
+    "  Pune " -> "pune". Deliberately simple — there is no dedicated
+    normaliser for skills or roles (only money, notice period, experience
+    and location have one), so this is the shared, lightweight convention.
+    """
+    return "_".join(text.strip().lower().split())
+
+
+def sync_preference_tables(
+    uow: UnitOfWork,
+    candidate_id: Any,
+    snapshot: ProfileSnapshot,
+) -> None:
+    """Reconcile candidate_skills / candidate_role_prefs / candidate_location_prefs
+    with the current ProfileSnapshot (FLOW-037).
+
+    These tables existed since FLOW-010 as part of the projection design but
+    were never populated — rebuild_projection() held skills/desired_roles/
+    locations only as transient dataclass fields. Recruiter search depends on
+    exactly this data, so this closes the gap where it was found.
+
+    Like candidate_profiles, these are derived projections: current_facts
+    passed into rebuild_projection() is already the FULL current attribute
+    set for the candidate (not just this turn's deltas), so snapshot.skills
+    etc. reflect complete current state and replace_all() is always correct
+    — an empty snapshot value means the candidate genuinely has none, not
+    that this turn didn't mention any.
+
+    Location strength defaults to "preferred": the extraction schema does
+    not yet distinguish preferred / acceptable / hard-requirement (§ Candidate
+    Preferences of REVIEW_AND_PLAN.md). That is a real, documented gap in the
+    extractor, not something this function should silently invent.
+    """
+    skill_rows: dict[str, dict[str, str]] = {}
+    for raw in snapshot.skills:
+        norm = _preference_dedup_key(raw)
+        if norm and norm not in skill_rows:
+            skill_rows[norm] = {"skill_raw": raw, "skill_norm": norm}
+    uow.skills.replace_all(candidate_id, list(skill_rows.values()))
+
+    role_rows: dict[str, dict[str, str]] = {}
+    for raw in snapshot.desired_roles:
+        norm = _preference_dedup_key(raw)
+        if norm and norm not in role_rows:
+            role_rows[norm] = {"role_raw": raw, "role_norm": norm}
+    uow.role_prefs.replace_all(candidate_id, list(role_rows.values()), kind="desired")
+
+    location_rows: dict[str, dict[str, str]] = {}
+    for raw in snapshot.locations:
+        norm = _preference_dedup_key(raw)
+        if norm and norm not in location_rows:
+            location_rows[norm] = {
+                "location_raw": raw,
+                "location_norm": norm,
+                "strength": "preferred",
+            }
+    uow.location_prefs.replace_all(candidate_id, list(location_rows.values()))
+
+
 def normalize_fact_value(key: str, raw_value: Any) -> tuple[Any, str | None]:
     """
     Normalise raw extracted fact values. Returns (normalized_value, ambiguity_reason).
@@ -403,8 +465,22 @@ def evaluate_policy_step(
     profile.notice_period_days = snapshot.notice_period_days
     profile.work_mode = snapshot.work_mode
     profile.education_level = snapshot.education_level
+    # Guarded, not unconditional: full_name is not sourced from
+    # candidate_attributes today (see app/domain/identity.py — it writes
+    # profile.full_name directly on confirmation/self-identification, not
+    # through the attribute store), so snapshot.full_name is always None
+    # under the current design. An unconditional assignment here would
+    # silently erase a name identity.py had just set. Once a source ever
+    # does write a `full_name` attribute (a future recruiter correction or
+    # resume-derived name), this picks it up automatically without needing
+    # to change this line.
+    if snapshot.full_name is not None:
+        profile.full_name = snapshot.full_name
     profile.completeness = snapshot.completeness
     profile.last_refreshed_at = current_time
+
+    # Reconcile the derived skill/role/location preference tables (FLOW-037)
+    sync_preference_tables(uow, candidate.id, snapshot)
 
     # Ensure candidate in policy evaluation has moved to intake if still new
     if candidate.lifecycle_status == LifecycleStatusEnum.new:

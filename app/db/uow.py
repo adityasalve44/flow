@@ -23,7 +23,12 @@ from app.repositories.conversation import (
     MessageRepository,
 )
 from app.repositories.moderation import ModerationEventRepository
-from app.repositories.profile import ProfileRepository
+from app.repositories.profile import (
+    LocationPrefRepository,
+    ProfileRepository,
+    RolePrefRepository,
+    SkillRepository,
+)
 from app.repositories.resume import ResumeRepository
 
 
@@ -47,6 +52,9 @@ class UnitOfWork:
         self.messages = MessageRepository(session)
         self.attributes = AttributeRepository(session)
         self.profiles = ProfileRepository(session)
+        self.skills = SkillRepository(session)
+        self.role_prefs = RolePrefRepository(session)
+        self.location_prefs = LocationPrefRepository(session)
         self.resumes = ResumeRepository(session)
         self.moderation_events = ModerationEventRepository(session)
         self.audit_events = AuditRepository(session)

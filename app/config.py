@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # --- Webhook security ---
     webhook_secret: str = ""
 
+    # --- Recruiter API security (FLOW-037) ---
+    # Placeholder shared-secret auth, mirroring webhook_secret. FLOW-038
+    # replaces this with real recruiter accounts, sessions and roles.
+    recruiter_api_key: str = ""
+
+    # --- Resume signed-URL TTL (FLOW-037) ---
+    resume_signed_url_ttl_seconds: int = 3600
+
     # --- Storage (FLOW-033) ---
     storage_backend: str = "local"
     supabase_url: str = ""
