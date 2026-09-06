@@ -1,5 +1,31 @@
+# Environment
 .env
+
+# Python
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Test / coverage
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Alembic
+# (keep migrations/versions/ tracked)
+
+# Data / SQLite
 data/*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
