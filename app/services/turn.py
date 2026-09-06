@@ -38,10 +38,7 @@ from app.services.conversation import resolve_conversation
 
 logger = logging.getLogger(__name__)
 
-SAFE_FALLBACK_REPLY = (
-    "Thanks for your message! We're experiencing a brief technical delay on our end. "
-    "Please send your message again in a moment."
-)
+from app.agents.callbacks import SAFE_FALLBACK_REPLY
 
 
 @dataclass(frozen=True)

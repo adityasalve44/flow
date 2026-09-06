@@ -14,6 +14,7 @@ from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.genai.types import Content
 
+from app.agents.callbacks import before_model_callback, on_model_error_callback
 from app.agents.prompts.extraction import EXTRACTOR_SYSTEM_INSTRUCTION
 from app.agents.schemas import TurnExtraction
 from app.config import get_settings
@@ -42,12 +43,13 @@ def create_extractor_agent(
     """
     Build the Extractor LlmAgent.
 
-    Invariants (§8, FLOW-018):
+    Invariants (§8, FLOW-018, FLOW-024):
     - output_schema = TurnExtraction
     - output_key = "temp:extraction"
     - tools = [] (no tools allowed — prevents untrusted input from invoking functions)
     - Instruction carries registry + hard extraction rules.
     - after_agent_callback ensures degradation to empty extraction if parsing fails.
+    - Guardrails: before_model_callback (caps size, neutralises injections), on_model_error_callback.
     """
     settings = get_settings()
     selected_model = model or settings.extractor_model
@@ -59,5 +61,7 @@ def create_extractor_agent(
         output_schema=TurnExtraction,
         output_key=EXTRACTION_OUTPUT_KEY,
         tools=[],
+        before_model_callback=before_model_callback,
         after_agent_callback=ensure_valid_extraction_callback,
+        on_model_error_callback=on_model_error_callback,
     )

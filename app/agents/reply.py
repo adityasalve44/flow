@@ -11,6 +11,12 @@ from typing import Any, Callable
 
 from google.adk.agents import LlmAgent
 
+from app.agents.callbacks import (
+    after_tool_callback,
+    before_model_callback,
+    before_tool_callback,
+    on_model_error_callback,
+)
 from app.agents.prompts.reply import reply_instruction_provider
 from app.config import get_settings
 
@@ -24,10 +30,14 @@ def create_reply_agent(
     """
     Build the Reply LlmAgent.
 
-    Invariants (§8, FLOW-020):
+    Invariants (§8, FLOW-020, FLOW-024):
     - Uses replier_model from settings by default.
     - Instruction is dynamically produced by reply_instruction_provider.
     - Generates one natural WhatsApp message fulfilling the directive.
+    - Guardrails:
+        * before_model_callback (size cap, injection neutralisation, token count)
+        * before_tool_callback / after_tool_callback (structured tool execution audit logging)
+        * on_model_error_callback (safe degradation without crashing)
     """
     settings = get_settings()
     selected_model = model or settings.replier_model
@@ -38,4 +48,8 @@ def create_reply_agent(
         model=selected_model,
         instruction=provider,
         tools=tools or [],
+        before_model_callback=before_model_callback,
+        before_tool_callback=before_tool_callback,
+        after_tool_callback=after_tool_callback,
+        on_model_error_callback=on_model_error_callback,
     )
