@@ -77,6 +77,10 @@ WORKED_EXAMPLES: dict[str, list[str]] = {
         "What is your expected CTC, and what is your current notice period?",
         "Are you looking for remote roles, or are you open to hybrid or on-site positions in Bengaluru?",
     ],
+    "greet_returning": [
+        "Welcome back! Great to connect with you again. What role and work are you targeting now?",
+        "Hi! Great to hear from you again. What kind of roles are you currently looking for next?",
+    ],
     "acknowledge_profile_ready": [
         "Thanks for sharing all your details! Your profile is ready and we have what we need to start looking for matching roles. We'll reach out as soon as an opportunity fits your expectations.",
         "All set! Your profile is ready on our end. Our team reviews matching opportunities daily, and we will be in touch as soon as a suitable role opens up.",
@@ -142,6 +146,9 @@ def build_reply_instruction(
         ),
         "acknowledge_profile_ready": (
             "Thank the candidate, confirm their profile is complete, and explain that recruiters will reach out when a matching role appears."
+        ),
+        "greet_returning": (
+            "Greet the candidate as returning, welcome them back warmly, do NOT recite old preferences as if they are current, and ask what they are doing now and looking for next."
         ),
     }
 

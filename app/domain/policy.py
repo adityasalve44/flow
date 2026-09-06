@@ -262,6 +262,7 @@ def evaluate_policy_step(
             created_at=a.created_at,
         )
         for a in db_attrs
+        if (a.status.value if hasattr(a.status, "value") else str(a.status)) == AttributeStatusEnum.current.value
     ]
 
     ambiguous_facts: list[dict[str, Any]] = []
@@ -339,31 +340,48 @@ def evaluate_policy_step(
             ambiguous_facts.append({"key": key, "value": norm_val, "reason": ambiguity_reason or "Ambiguous"})
 
         elif new_fact in merge_result.accepted:
-            db_attr = CandidateAttribute(
-                id=new_fact.id,
-                candidate_id=candidate.id,
-                key=new_fact.key,
-                value=new_fact.value,
-                raw_text=new_fact.raw_text,
-                source=SourceEnum.candidate_stated,
-                confidence=ConfidenceEnum.confirmed,
-                status=AttributeStatusEnum.current,
-                data_class=DataClassEnum(new_fact.data_class),
-                conversation_id=conversation.id,
-                message_id=None,
-                created_at=current_time,
-            )
-            if merge_result.superseded:
-                for sup in merge_result.superseded:
-                    uow.attributes.supersede(
-                        old_attribute_id=sup.id,
-                        new_attribute=db_attr,
-                    )
-                    for f in current_facts:
-                        if f.id == sup.id:
-                            object.__setattr__(f, "status", AttributeStatusEnum.superseded.value)
+            from app.domain.staleness import get_stale_attributes
+            stale_attrs = get_stale_attributes(uow, candidate.id)
+            matching_stale = next((a for a in stale_attrs if a.key == new_fact.key), None)
+
+            if matching_stale is not None:
+                # Restore existing stale attribute rather than duplicating (FLOW-030)
+                matching_stale.status = AttributeStatusEnum.current
+                matching_stale.confidence = ConfidenceEnum.confirmed
+                matching_stale.source = SourceEnum.candidate_stated
+                matching_stale.value = new_fact.value
+                matching_stale.raw_text = new_fact.raw_text
+                matching_stale.conversation_id = conversation.id
+                matching_stale.confirmed_at = current_time
+                matching_stale.updated_at = current_time
+                uow.attributes.add(matching_stale)
+                db_attr = matching_stale
             else:
-                uow.attributes.add(db_attr)
+                db_attr = CandidateAttribute(
+                    id=new_fact.id,
+                    candidate_id=candidate.id,
+                    key=new_fact.key,
+                    value=new_fact.value,
+                    raw_text=new_fact.raw_text,
+                    source=SourceEnum.candidate_stated,
+                    confidence=ConfidenceEnum.confirmed,
+                    status=AttributeStatusEnum.current,
+                    data_class=DataClassEnum(new_fact.data_class),
+                    conversation_id=conversation.id,
+                    message_id=None,
+                    created_at=current_time,
+                )
+                if merge_result.superseded:
+                    for sup in merge_result.superseded:
+                        uow.attributes.supersede(
+                            old_attribute_id=sup.id,
+                            new_attribute=db_attr,
+                        )
+                        for f in current_facts:
+                            if f.id == sup.id:
+                                object.__setattr__(f, "status", AttributeStatusEnum.superseded.value)
+                else:
+                    uow.attributes.add(db_attr)
 
             current_facts.append(new_fact)
 
@@ -530,8 +548,22 @@ def evaluate_policy_step(
             current_facts, recently_asked, declined_keys, ask_counts=ask_counts
         )
 
+        # In mode=refresh, suppress acknowledge_profile_ready and open with refresh ask (FLOW-030)
+        if conversation.mode == ConversationModeEnum.refresh:
+            if not extraction.facts and not current_facts:
+                chosen_directive = PolicyDirective(
+                    name="greet_returning",
+                    fields_to_ask=["desired_role"],
+                    reason="Returning candidate in refresh mode; ask current role target",
+                )
+            else:
+                chosen_directive = PolicyDirective(
+                    name="ask_next",
+                    fields_to_ask=missing_fields or ["desired_role", "expected_ctc"],
+                    reason="Refresh mode: reconfirm current career targets",
+                )
         # Rung 11: ask_resume (profile ready or substantially complete, no current resume)
-        if ready and not any(f.key == "resume" for f in current_facts):
+        elif ready and not any(f.key == "resume" for f in current_facts):
             chosen_directive = PolicyDirective(
                 name="ask_resume",
                 reason="Profile substantially complete; request resume",

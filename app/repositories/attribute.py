@@ -35,6 +35,9 @@ class AttributeRepository:
         )
         return list(self.session.scalars(statement).all())
 
+    # Alias for ergonomics
+    get_current_by_candidate = get_current_for_candidate
+
     def get_current_by_key(
         self, candidate_id: UUID | str, key: str
     ) -> CandidateAttribute | None:

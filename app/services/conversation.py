@@ -68,8 +68,8 @@ def resolve_conversation(
     if is_stale_profile:
         # Profile is older than stale_profile_days: open in refresh mode
         mode = ConversationModeEnum.refresh
-        # Mark all current facts as stale, preserving history
-        uow.attributes.mark_all_current_as_stale(candidate.id)
+        from app.domain.staleness import mark_candidate_profile_stale
+        mark_candidate_profile_stale(uow, candidate, now=current_time)
     elif candidate.consent_status == ConsentStatusEnum.granted:
         mode = ConversationModeEnum.intake
     else:
