@@ -77,6 +77,13 @@ def before_model_callback(
     2. Neutralises instruction-injection markers.
     3. Computes estimated token count and records in session state / telemetry.
     """
+    # Bypass model call completely on disengage_silent directive
+    state = getattr(callback_context, "state", None)
+    if state is not None:
+        directive = state.get("temp:directive")
+        if isinstance(directive, dict) and directive.get("name") == "disengage_silent":
+            return LlmResponse(content=types.Content(role="model", parts=[]))
+
     total_tokens = 0
 
     if llm_request.contents:

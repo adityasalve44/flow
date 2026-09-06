@@ -106,12 +106,16 @@ class PolicyAgent(BaseAgent):
                 if extraction.refusal_signal and directive.fields_to_ask:
                     declined_keys.update(directive.fields_to_ask)
 
+                uow.conversations.add(conversation)
+                uow.commit()
+
         # 4. Yield Event with state_delta
         yield Event(
             author=self.name,
             actions=EventActions(
                 state_delta={
                     "temp:directive": directive_dict,
+                    "directive": directive_dict,
                     "temp:snapshot": snapshot_dict,
                     "recently_asked": recently_asked,
                     "declined_keys": list(declined_keys),

@@ -23,6 +23,7 @@ from app.db.uow import UnitOfWork
 from app.domain.completeness import is_profile_ready
 from app.domain.identity import names_are_compatible, update_candidate_identity
 from app.domain.merge import Fact, MergeContext, merge_facts
+from app.domain.moderation import is_genuine_deflection, record_deflection
 from app.domain.normalize import (
     normalize_experience,
     normalize_location,
@@ -389,8 +390,13 @@ def evaluate_policy_step(
         candidate.lifecycle_status = LifecycleStatusEnum.profile_ready
 
     # 4. Update counters
-    if extraction.refusal_signal:
-        conversation.deflection_count += 1
+    is_defl = is_genuine_deflection(
+        refusal_signal=bool(extraction.refusal_signal or getattr(extraction, "intent", None) == "refuse"),
+        demanded_other=bool(getattr(extraction, "intent", None) == "deflect"),
+        is_off_topic=bool(getattr(extraction, "off_topic", False)),
+    )
+    if is_defl:
+        record_deflection(conversation, is_deflection=True)
     if extraction.abuse_signal:
         conversation.abuse_count += 1
 

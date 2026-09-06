@@ -43,6 +43,16 @@ class ConversationRepository:
         )
         return self.session.scalar(statement)
 
+    def get_latest(self, candidate_id: UUID | str) -> Conversation | None:
+        """Return the most recent conversation for a candidate regardless of status."""
+        statement = (
+            select(Conversation)
+            .where(Conversation.candidate_id == candidate_id)
+            .order_by(Conversation.started_at.desc())
+            .limit(1)
+        )
+        return self.session.scalar(statement)
+
     def create(
         self,
         candidate_id: UUID | str,

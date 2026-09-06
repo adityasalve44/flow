@@ -39,6 +39,7 @@ from app.services.conversation import resolve_conversation
 logger = logging.getLogger(__name__)
 
 from app.agents.callbacks import SAFE_FALLBACK_REPLY
+from app.domain.moderation import reopen_conversation, should_reopen_conversation
 
 
 @dataclass(frozen=True)
@@ -101,12 +102,48 @@ class TurnService:
                 phone_number=phone,
                 display_name=inbound.contact_name,
             )
-            conversation = resolve_conversation(
-                uow=uow,
-                candidate=candidate,
-                channel=channel,
-                now=current_time,
-            )
+
+            # Check if candidate has a recent conversation closed due to disengagement
+            latest_conv = uow.conversations.get_latest(candidate.id)
+            if (
+                latest_conv
+                and latest_conv.status in (ConversationStatusEnum.closed, ConversationStatusEnum.disengaged)
+                and latest_conv.deflection_count >= 3
+            ):
+                if not should_reopen_conversation(message_body):
+                    inbound_msg = Message(
+                        conversation_id=latest_conv.id,
+                        candidate_id=candidate.id,
+                        direction=DirectionEnum.inbound,
+                        channel_message_id=inbound.channel_message_id,
+                        body=message_body,
+                        media_ref=media_ref,
+                        created_at=current_time,
+                    )
+                    uow.messages.add(inbound_msg)
+                    latest_conv.last_inbound_at = current_time
+                    uow.commit()
+                    return TurnResult(
+                        candidate_id=candidate.id,
+                        conversation_id=latest_conv.id,
+                        reply_text="",
+                        directive="disengage_silent",
+                        mode=latest_conv.mode.value if hasattr(latest_conv.mode, "value") else str(latest_conv.mode),
+                        is_closed=True,
+                        inbound_message_id=inbound_msg.id,
+                        outbound_message_id=None,
+                    )
+                else:
+                    reopen_conversation(latest_conv)
+                    uow.conversations.add(latest_conv)
+                    conversation = latest_conv
+            else:
+                conversation = resolve_conversation(
+                    uow=uow,
+                    candidate=candidate,
+                    channel=channel,
+                    now=current_time,
+                )
 
             # Persist inbound message
             inbound_msg = Message(
@@ -159,6 +196,24 @@ class TurnService:
                     outbound_message_id=outbound_msg.id,
                 )
 
+            # Step 2.5: Check disengagement / silence guard
+            if conversation.status == ConversationStatusEnum.closed or conversation.deflection_count >= 3:
+                if should_reopen_conversation(message_body):
+                    reopen_conversation(conversation)
+                else:
+                    # Suppress model call entirely; return silence
+                    uow.commit()
+                    return TurnResult(
+                        candidate_id=cand_id,
+                        conversation_id=conv_id,
+                        reply_text="",
+                        directive="disengage_silent",
+                        mode=conversation.mode.value if hasattr(conversation.mode, "value") else str(conversation.mode),
+                        is_closed=True,
+                        inbound_message_id=inbound_msg_id,
+                        outbound_message_id=None,
+                    )
+
             uow.commit()
 
         # Step 3: Consent granted -> run ADK agent pipeline
@@ -182,17 +237,19 @@ class TurnService:
                 session_id=str(conv_id),
                 new_message=user_content,
             ):
-                # Extract text
+                # Extract directive if emitted by policy agent
+                if event.actions and event.actions.state_delta:
+                    dir_dict = (
+                        event.actions.state_delta.get("directive")
+                        or event.actions.state_delta.get("temp:directive")
+                    )
+                    if dir_dict and isinstance(dir_dict, dict):
+                        directive_name = dir_dict.get("name", directive_name)
+
                 if event.content and event.content.parts:
                     text_parts = [p.text for p in event.content.parts if p.text]
                     if text_parts:
                         reply_text = "".join(text_parts)
-
-                # Extract directive if emitted by policy agent
-                if event.actions and event.actions.state_delta:
-                    dir_dict = event.actions.state_delta.get("temp:directive")
-                    if dir_dict and isinstance(dir_dict, dict):
-                        directive_name = dir_dict.get("name", directive_name)
 
         except Exception as err:
             logger.error(
@@ -203,6 +260,25 @@ class TurnService:
             )
             reply_text = SAFE_FALLBACK_REPLY
             directive_name = "error_fallback"
+
+        # Handle disengage_silent: suppress outbound reply and model call
+        if directive_name == "disengage_silent":
+            with uow:
+                conv_record = uow.conversations.get_by_id(conv_id)
+                if conv_record:
+                    conv_record.status = ConversationStatusEnum.closed
+                uow.commit()
+
+            return TurnResult(
+                candidate_id=cand_id,
+                conversation_id=conv_id,
+                reply_text="",
+                directive="disengage_silent",
+                mode="intake",
+                is_closed=True,
+                inbound_message_id=inbound_msg_id,
+                outbound_message_id=None,
+            )
 
         if not reply_text:
             reply_text = (
