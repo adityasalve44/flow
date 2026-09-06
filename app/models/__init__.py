@@ -25,6 +25,11 @@ from app.models.candidate import (
     Message,
 )
 from app.models.attribute import CandidateAttribute
+from app.models.profile import (
+    CandidateSkill,
+    CandidateRolePref,
+    CandidateLocationPref,
+)
 
 __all__ = [
     "Base",
@@ -43,7 +48,10 @@ __all__ = [
     # Models
     "Candidate",
     "CandidateAttribute",
+    "CandidateLocationPref",
     "CandidateProfile",
+    "CandidateRolePref",
+    "CandidateSkill",
     "Conversation",
     "Message",
 ]
