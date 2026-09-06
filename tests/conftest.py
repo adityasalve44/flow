@@ -69,8 +69,11 @@ def test_engine():
         # from legacy schema runs.
         conn.execute(
             __import__("sqlalchemy").text(
+                "DROP SCHEMA IF EXISTS flow CASCADE; "
+                "DROP SCHEMA IF EXISTS adk CASCADE; "
                 "DROP SCHEMA public CASCADE; CREATE SCHEMA public; "
-                "CREATE SCHEMA IF NOT EXISTS flow;"
+                "CREATE SCHEMA flow; "
+                "CREATE SCHEMA adk;"
             )
         )
         Base.metadata.create_all(conn)

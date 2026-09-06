@@ -44,7 +44,7 @@ class CandidateSkill(Base, TimestampMixin):
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -73,7 +73,7 @@ class CandidateRolePref(Base, TimestampMixin):
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -104,7 +104,7 @@ class CandidateLocationPref(Base, TimestampMixin):
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

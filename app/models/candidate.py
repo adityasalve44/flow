@@ -14,14 +14,16 @@ Key design decisions (from §6 of REVIEW_AND_PLAN.md):
 - No org_id anywhere — single-tenant (Q1).
 """
 
-import uuid
 from datetime import datetime
+from decimal import Decimal
+import uuid
 
 from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -109,7 +111,7 @@ class CandidateProfile(Base, TimestampMixin):
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         primary_key=True,
     )
     full_name: Mapped[str | None] = mapped_column(String(255))
@@ -117,8 +119,8 @@ class CandidateProfile(Base, TimestampMixin):
     current_company: Mapped[str | None] = mapped_column(String(255))
     experience_years: Mapped[float | None] = mapped_column()
     # Money — NUMERIC via Python Decimal; currency is always explicit
-    current_ctc_annual: Mapped[float | None] = mapped_column()
-    expected_ctc_annual: Mapped[float | None] = mapped_column()
+    current_ctc_annual: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    expected_ctc_annual: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     currency: Mapped[str | None] = mapped_column(String(10))  # e.g. "INR"
     notice_period_days: Mapped[int | None] = mapped_column(Integer)
     work_mode: Mapped[str | None] = mapped_column(String(50))
@@ -143,7 +145,7 @@ class Conversation(Base, TimestampMixin):
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
@@ -207,13 +209,13 @@ class Message(Base):
     )
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("conversations.id", ondelete="CASCADE"),
+        ForeignKey("flow.conversations.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )

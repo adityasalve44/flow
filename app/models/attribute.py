@@ -53,7 +53,7 @@ class CandidateAttribute(Base):
     )
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidates.id", ondelete="CASCADE"),
+        ForeignKey("flow.candidates.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -85,14 +85,14 @@ class CandidateAttribute(Base):
     # Traceability — every fact points at the turn that produced it
     conversation_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("conversations.id", ondelete="SET NULL"),
+        ForeignKey("flow.conversations.id", ondelete="SET NULL"),
     )
     message_id: Mapped[str | None] = mapped_column(String(255))
 
     # Supersession chain — allows tracing history
     superseded_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("candidate_attributes.id", ondelete="SET NULL"),
+        ForeignKey("flow.candidate_attributes.id", ondelete="SET NULL"),
     )
 
     valid_from: Mapped[datetime] = mapped_column(
