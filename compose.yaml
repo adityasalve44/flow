@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pgsql
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: flow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgsql -d flow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:
