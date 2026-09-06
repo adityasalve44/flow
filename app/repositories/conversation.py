@@ -90,7 +90,7 @@ class MessageRepository:
         statement = (
             select(Message)
             .where(Message.conversation_id == conversation_id)
-            .order_by(Message.created_at.desc())
+            .order_by(Message.created_at.desc(), Message.id.desc())
             .limit(limit)
         )
         return list(reversed(self.session.scalars(statement).all()))

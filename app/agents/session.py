@@ -78,7 +78,8 @@ def get_session_service(force_in_memory: bool = False) -> BaseSessionService:
     """Get or initialize the singleton session service."""
     global _session_service
     if _session_service is None:
-        _session_service = create_session_service(in_memory=force_in_memory)
+        in_mem = force_in_memory or get_settings().is_testing
+        _session_service = create_session_service(in_memory=in_mem)
     return _session_service
 
 
