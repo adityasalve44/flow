@@ -31,6 +31,8 @@ from app.models.profile import (
     CandidateLocationPref,
 )
 from app.models.moderation import ModerationEvent
+from app.models.resume import Resume
+from app.models.audit import AuditEvent
 
 __all__ = [
     "Base",
@@ -47,6 +49,7 @@ __all__ = [
     "LifecycleStatusEnum",
     "SourceEnum",
     # Models
+    "AuditEvent",
     "Candidate",
     "CandidateAttribute",
     "CandidateLocationPref",
@@ -56,4 +59,5 @@ __all__ = [
     "Conversation",
     "Message",
     "ModerationEvent",
+    "Resume",
 ]

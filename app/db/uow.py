@@ -24,6 +24,7 @@ from app.repositories.conversation import (
 from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
 from app.repositories.moderation import ModerationEventRepository
+from app.repositories.audit import AuditRepository
 
 
 class UnitOfWork:
@@ -48,6 +49,7 @@ class UnitOfWork:
         self.profiles = ProfileRepository(session)
         self.resumes = ResumeRepository(session)
         self.moderation_events = ModerationEventRepository(session)
+        self.audit_events = AuditRepository(session)
 
     def __enter__(self) -> "UnitOfWork":
         if self.session is None:

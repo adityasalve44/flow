@@ -19,9 +19,11 @@ from app.repositories.conversation import (
 )
 from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
+from app.repositories.audit import AuditRepository
 
 __all__ = [
     "AttributeRepository",
+    "AuditRepository",
     "CandidateRepository",
     "ConversationRepository",
     "MessageRepository",

@@ -68,6 +68,8 @@ def test_migration_round_trip(alembic_config):
             "conversations",
             "messages",
             "moderation_events",
+            "resumes",
+            "audit_events",
         }
         assert expected_tables.issubset(table_names), f"Missing tables: {expected_tables - table_names}"
 

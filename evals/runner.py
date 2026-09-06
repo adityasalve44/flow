@@ -264,6 +264,7 @@ async def run_scenario(scenario_data: dict[str, Any], session: Session) -> Scena
             past_time = t0 - timedelta(hours=init["previous_conversation_closed_hours_ago"])
             past_conv = uow.conversations.create(candidate_id=cand.id, channel=ChannelEnum.simulator)
             past_conv.status = ConversationStatusEnum.closed
+            past_conv.started_at = past_time - timedelta(hours=1)
             past_conv.closed_at = past_time
             uow.conversations.add(past_conv)
 
@@ -271,6 +272,7 @@ async def run_scenario(scenario_data: dict[str, Any], session: Session) -> Scena
             past_time = t0 - timedelta(days=init["previous_conversation_closed_days_ago"])
             past_conv = uow.conversations.create(candidate_id=cand.id, channel=ChannelEnum.simulator)
             past_conv.status = ConversationStatusEnum.closed
+            past_conv.started_at = past_time - timedelta(days=1)
             past_conv.closed_at = past_time
             uow.conversations.add(past_conv)
             cand_profile = uow.profiles.get_or_create(cand.id)
