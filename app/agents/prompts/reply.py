@@ -107,6 +107,47 @@ def build_reply_instruction(
         f"### CURRENT DIRECTIVE: {directive_name}",
     ]
 
+    DIRECTIVE_GUIDELINES: dict[str, str] = {
+        "answer_and_continue": (
+            f"Directly answer the candidate's question clearly and concisely in 1-2 sentences using the glossary if applicable. "
+            f"Then in the same message, continue the conversation by asking about the pending field: {fields_desc}."
+        ),
+        "redirect": (
+            f"Acknowledge the candidate's question politely. Never confirm a specific job opening exists, "
+            f"never name client companies, and never promise an interview. Politely redirect back to completing their profile: {fields_desc}."
+        ),
+        "clarify_name": (
+            "Politely clarify the candidate's name — ask which name they prefer to go by."
+        ),
+        "ask_next": (
+            f"Naturally ask the candidate about the missing profile criteria: {fields_desc}. Remember: at most two questions."
+        ),
+        "ask_consent": (
+            "Explain that Flow collects candidate career preferences to match opportunities, reassure privacy, and ask for consent."
+        ),
+        "offer_call": (
+            "Acknowledge typing can be tedious and offer a brief 5-minute phone call with a recruiter."
+        ),
+        "warn_abuse": (
+            "Politely but firmly request that the conversation remain professional and respectful."
+        ),
+        "close_consent_declined": (
+            "Respectfully acknowledge consent refusal or withdrawal, confirm no data is saved, and wish them well."
+        ),
+        "disengage_silent": (
+            "Close the conversation politely without further questions."
+        ),
+        "ask_resume": (
+            "Congratulate them on a complete profile and ask if they have a resume (PDF/DOCX) to share."
+        ),
+        "acknowledge_profile_ready": (
+            "Thank the candidate, confirm their profile is complete, and explain that recruiters will reach out when a matching role appears."
+        ),
+    }
+
+    if directive_name in DIRECTIVE_GUIDELINES:
+        prompt_parts.append(f"### DIRECTIVE GUIDANCE:\n{DIRECTIVE_GUIDELINES[directive_name]}")
+
     if fields_desc:
         prompt_parts.append(f"### FIELDS TO ASK ABOUT: {fields_desc}")
     if ambiguous_fact:

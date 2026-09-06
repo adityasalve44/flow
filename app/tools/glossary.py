@@ -80,6 +80,41 @@ GLOSSARY_DEFINITIONS: dict[str, str] = {
         "Under labour laws in India and other jurisdictions, it is payable after completing 5 or more continuous years.\n"
         "The calculation is tied to the employee's last drawn basic salary and total completed years of tenure."
     ),
+    "relocation_allowance": (
+        "Financial compensation or direct expense reimbursement provided to assist an employee moving cities for work.\n"
+        "It typically covers packing and moving services, temporary accommodation (usually 14 to 30 days), and transit flights.\n"
+        "Relocation packages are usually subject to a minimum retention agreement (typically 12 months)."
+    ),
+    "joining_bonus": (
+        "A one-time lump-sum incentive paid upon beginning employment to attract high-demand talent.\n"
+        "It can offset compensation lost from forfeiting unvested stock options or unserved bonuses at a previous employer.\n"
+        "It usually carries a 1-year clawback clause requiring repayment if the employee departs early."
+    ),
+    "retention_bonus": (
+        "A financial incentive offered to retain critical employees during key milestones or company transitions.\n"
+        "Payment is contingent on the employee remaining actively employed through a specified vesting date.\n"
+        "If the employee resigns before the milestone date, the bonus is forfeited or subject to clawback."
+    ),
+    "hra": (
+        "House Rent Allowance (HRA) is a dedicated component of an employee's salary designed to offset rented living costs.\n"
+        "Under tax regulations, employees paying rent for residential accommodation can claim statutory income tax exemption.\n"
+        "The exemption is calculated based on rent paid, basic salary, and whether the city is a metropolitan area."
+    ),
+    "provident_fund": (
+        "A statutory retirement savings scheme where employer and employee make matching monthly contributions.\n"
+        "In India, Employees' Provident Fund (EPF) typically deducts 12% of basic salary towards the retirement corpus.\n"
+        "The accumulated balance earns government-declared annual interest and is withdrawable upon retirement or unemployment."
+    ),
+    "clawback": (
+        "A contractual provision entitling an employer to recover bonuses, relocation expenses, or buyout costs.\n"
+        "Clawbacks are triggered if the employee voluntarily resigns or is terminated for cause within a designated period (often 12 months).\n"
+        "The obligation to repay is legally enforceable under employment contract terms."
+    ),
+    "take_home_salary": (
+        "Net take-home pay is the actual disposable income credited to an employee's bank account each pay cycle.\n"
+        "It equals gross salary minus all statutory and voluntary withholdings including income tax (TDS), PF, and professional tax.\n"
+        "Because CTC includes employer contributions and variable bonuses, monthly take-home is distinctly lower than CTC/12."
+    ),
 }
 
 # Synonym mapping to canonical glossary keys
@@ -123,6 +158,30 @@ TERM_ALIASES: dict[str, str] = {
     "hybrid": "work_mode",
     "remote": "work_mode",
     "gratuity": "gratuity",
+    "relocation": "relocation_allowance",
+    "relocation allowance": "relocation_allowance",
+    "relocation_allowance": "relocation_allowance",
+    "joining bonus": "joining_bonus",
+    "signing bonus": "joining_bonus",
+    "joining_bonus": "joining_bonus",
+    "sign on bonus": "joining_bonus",
+    "retention bonus": "retention_bonus",
+    "retention_bonus": "retention_bonus",
+    "hra": "hra",
+    "house rent allowance": "hra",
+    "pf": "provident_fund",
+    "epf": "provident_fund",
+    "provident fund": "provident_fund",
+    "provident_fund": "provident_fund",
+    "clawback": "clawback",
+    "claw back": "clawback",
+    "clawback clause": "clawback",
+    "take home": "take_home_salary",
+    "take home salary": "take_home_salary",
+    "in hand": "take_home_salary",
+    "in hand salary": "take_home_salary",
+    "net pay": "take_home_salary",
+    "net salary": "take_home_salary",
 }
 
 
