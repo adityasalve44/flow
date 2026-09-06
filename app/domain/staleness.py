@@ -67,7 +67,14 @@ def mark_candidate_profile_stale(
 
     # Demote lifecycle status to intake since stale profile lacks verified current readiness
     if candidate.lifecycle_status == LifecycleStatusEnum.profile_ready:
-        candidate.lifecycle_status = LifecycleStatusEnum.intake
+        from app.domain.lifecycle import transition_candidate_lifecycle
+        transition_candidate_lifecycle(
+            candidate=candidate,
+            target_status=LifecycleStatusEnum.intake,
+            reason="refresh_mode_stale_facts",
+            uow=uow,
+            now=current_time,
+        )
         uow.candidates.add(candidate)
 
     if candidate.profile is not None:

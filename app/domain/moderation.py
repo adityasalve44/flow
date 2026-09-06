@@ -163,10 +163,20 @@ def block_candidate(
 ) -> None:
     """Admin path: block a candidate permanently.
 
-    Sets candidate.blocked_at. Ingress will reject and short-circuit immediately.
+    Transitions candidate lifecycle to blocked and sets candidate.blocked_at.
+    Ingress will reject and short-circuit immediately.
     """
     now = datetime.now(timezone.utc)
-    candidate.blocked_at = now
+    from app.domain.lifecycle import transition_candidate_lifecycle
+    from app.models.enums import LifecycleStatusEnum
+
+    transition_candidate_lifecycle(
+        candidate=candidate,
+        target_status=LifecycleStatusEnum.blocked,
+        reason=reason,
+        uow=None,
+        now=now,
+    )
     uow.candidates.add(candidate)
 
     # If there is an active conversation, escalate and close it
@@ -182,4 +192,31 @@ def block_candidate(
         kind="block",
         detail=reason,
         conversation_id=active_conv.id if active_conv else None,
+    )
+
+
+def unblock_candidate(
+    uow: UnitOfWork,
+    candidate: Candidate,
+    target_status: "LifecycleStatusEnum | str" = "intake",
+    reason: str = "Administrative unblock",
+) -> None:
+    """Admin path: unblock a candidate and restore to a valid active/dormant status."""
+    now = datetime.now(timezone.utc)
+    from app.domain.lifecycle import transition_candidate_lifecycle
+
+    transition_candidate_lifecycle(
+        candidate=candidate,
+        target_status=target_status,
+        reason=reason,
+        uow=None,
+        now=now,
+    )
+    uow.candidates.add(candidate)
+
+    record_moderation_event(
+        uow=uow,
+        candidate_id=candidate.id,
+        kind="unblock",
+        detail=f"Restored to {target_status}: {reason}",
     )

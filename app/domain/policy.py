@@ -406,10 +406,28 @@ def evaluate_policy_step(
     profile.completeness = snapshot.completeness
     profile.last_refreshed_at = current_time
 
+    # Ensure candidate in policy evaluation has moved to intake if still new
+    if candidate.lifecycle_status == LifecycleStatusEnum.new:
+        from app.domain.lifecycle import transition_candidate_lifecycle
+        transition_candidate_lifecycle(
+            candidate=candidate,
+            target_status=LifecycleStatusEnum.intake,
+            reason="intake_evaluation_active",
+            uow=uow,
+            now=current_time,
+        )
+
     # Lifecycle transition to profile_ready if all 6 blocking fields confirmed
     ready = is_profile_ready(current_facts)
-    if ready and candidate.lifecycle_status in (LifecycleStatusEnum.new, LifecycleStatusEnum.intake):
-        candidate.lifecycle_status = LifecycleStatusEnum.profile_ready
+    if ready and candidate.lifecycle_status in (LifecycleStatusEnum.intake, LifecycleStatusEnum.dormant):
+        from app.domain.lifecycle import transition_candidate_lifecycle
+        transition_candidate_lifecycle(
+            candidate=candidate,
+            target_status=LifecycleStatusEnum.profile_ready,
+            reason="all_six_blocking_fields_confirmed",
+            uow=uow,
+            now=current_time,
+        )
 
     # 4. Update counters
     is_defl = is_genuine_deflection(

@@ -27,6 +27,7 @@ from app.models.enums import (
     ConsentStatusEnum,
     ConversationModeEnum,
     ConversationStatusEnum,
+    LifecycleStatusEnum,
 )
 
 GRANT_PHRASES: frozenset[str] = frozenset({
@@ -192,6 +193,14 @@ def evaluate_consent_turn(
         candidate.consent_at = current_time
         candidate.consent_message_id = channel_message_id
         conversation.mode = ConversationModeEnum.intake
+        if candidate.lifecycle_status == LifecycleStatusEnum.new:
+            from app.domain.lifecycle import transition_candidate_lifecycle
+            transition_candidate_lifecycle(
+                candidate=candidate,
+                target_status=LifecycleStatusEnum.intake,
+                reason="consent_granted",
+                now=current_time,
+            )
         return ConsentDecision(
             intent=ConsentIntent.GRANT,
             directive="consent_granted",
