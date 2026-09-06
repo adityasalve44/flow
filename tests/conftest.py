@@ -33,7 +33,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.config import Settings
 from app.models import Base
 
 
@@ -42,6 +41,7 @@ def _get_test_db_url() -> str:
     # Construct a Settings with just the fields we need from the .env file,
     # but force test_database_url resolution by reading environment directly.
     import os
+
     from dotenv import load_dotenv
     load_dotenv()
     test_url = os.getenv("TEST_DATABASE_URL")

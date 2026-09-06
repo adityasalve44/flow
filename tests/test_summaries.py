@@ -8,16 +8,14 @@ Tests:
 4. Summary captures deflections, abuse, mode, and final status.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
-import pytest
 
 from app.agents.summariser import (
     build_deterministic_summary,
     close_and_summarise_conversation,
     format_transcript,
-    summarise_conversation,
     summarise_messages,
 )
 from app.db.uow import UnitOfWork
@@ -68,7 +66,7 @@ def test_deterministic_summary_captures_counters_and_status():
         channel=ChannelEnum.simulator,
         mode=ConversationModeEnum.intake,
         status=ConversationStatusEnum.closed,
-        started_at=datetime(2026, 9, 6, 10, 0, tzinfo=timezone.utc),
+        started_at=datetime(2026, 9, 6, 10, 0, tzinfo=UTC),
         deflection_count=2,
         abuse_count=1,
     )
@@ -163,7 +161,7 @@ def test_summarise_messages_llm_failure_falls_back():
     conv = Conversation(
         mode=ConversationModeEnum.intake,
         status=ConversationStatusEnum.active,
-        started_at=datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc),
+        started_at=datetime(2026, 9, 6, 12, 0, tzinfo=UTC),
     )
     messages = [
         Message(direction=DirectionEnum.inbound, body="I am looking for Java roles in Pune."),

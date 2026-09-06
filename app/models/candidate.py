@@ -14,9 +14,10 @@ Key design decisions (from §6 of REVIEW_AND_PLAN.md):
 - No org_id anywhere — single-tenant (Q1).
 """
 
+import uuid
 from datetime import datetime
 from decimal import Decimal
-import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     DateTime,
@@ -26,7 +27,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -41,6 +41,9 @@ from app.models.enums import (
     DirectionEnum,
     LifecycleStatusEnum,
 )
+
+if TYPE_CHECKING:
+    from app.models.resume import Resume
 
 
 class Candidate(Base, TimestampMixin):
@@ -82,24 +85,24 @@ class Candidate(Base, TimestampMixin):
     blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Relationships
-    profile: Mapped["CandidateProfile | None"] = relationship(
+    profile: Mapped[CandidateProfile | None] = relationship(
         "CandidateProfile",
         back_populates="candidate",
         cascade="all, delete-orphan",
         uselist=False,
     )
-    conversations: Mapped[list["Conversation"]] = relationship(
+    conversations: Mapped[list[Conversation]] = relationship(
         "Conversation",
         back_populates="candidate",
         cascade="all, delete-orphan",
     )
-    messages: Mapped[list["Message"]] = relationship(
+    messages: Mapped[list[Message]] = relationship(
         "Message",
         back_populates="candidate",
         cascade="all, delete-orphan",
         foreign_keys="[Message.candidate_id]",
     )
-    resumes: Mapped[list["Resume"]] = relationship(  # type: ignore[name-defined]
+    resumes: Mapped[list["Resume"]] = relationship(
         "Resume",
         back_populates="candidate",
         cascade="all, delete-orphan",
@@ -133,7 +136,7 @@ class CandidateProfile(Base, TimestampMixin):
     completeness: Mapped[float | None] = mapped_column()
     last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    candidate: Mapped["Candidate"] = relationship(
+    candidate: Mapped[Candidate] = relationship(
         "Candidate",
         back_populates="profile",
     )
@@ -193,11 +196,11 @@ class Conversation(Base, TimestampMixin):
     )
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    candidate: Mapped["Candidate"] = relationship(
+    candidate: Mapped[Candidate] = relationship(
         "Candidate",
         back_populates="conversations",
     )
-    messages: Mapped[list["Message"]] = relationship(
+    messages: Mapped[list[Message]] = relationship(
         "Message",
         back_populates="conversation",
         cascade="all, delete-orphan",
@@ -240,11 +243,11 @@ class Message(Base):
         nullable=False,
     )
 
-    conversation: Mapped["Conversation"] = relationship(
+    conversation: Mapped[Conversation] = relationship(
         "Conversation",
         back_populates="messages",
     )
-    candidate: Mapped["Candidate"] = relationship(
+    candidate: Mapped[Candidate] = relationship(
         "Candidate",
         back_populates="messages",
         foreign_keys=[candidate_id],

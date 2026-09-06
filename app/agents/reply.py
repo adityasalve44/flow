@@ -7,7 +7,8 @@ Core requirements (§8, FLOW-020 of REVIEW_AND_PLAN.md):
 - At most 2 asks, zero invented facts, never confirms a job exists.
 """
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from google.adk.agents import LlmAgent
 

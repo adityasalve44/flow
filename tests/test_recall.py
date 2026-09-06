@@ -8,9 +8,9 @@ Requirements (§8, FLOW-031 of REVIEW_AND_PLAN.md):
 4. Tool interface conforms to ADK Tool standards.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
-import pytest
+
 from google.adk.tools import FunctionTool
 
 from app.db.uow import UnitOfWork
@@ -60,7 +60,7 @@ def test_budget_bound_over_200_message_history(db):
                 mode=ConversationModeEnum.intake,
             )
             conv.status = ConversationStatusEnum.closed
-            conv.closed_at = datetime(2026, 8, 1 + i, 12, 0, tzinfo=timezone.utc)
+            conv.closed_at = datetime(2026, 8, 1 + i, 12, 0, tzinfo=UTC)
             conv.summary = (
                 f"Conversation #{i + 1}: Candidate discussed backend engineering roles in Bengaluru. "
                 f"Explored salary expectations between 20-25 LPA and notice period of 30 days. "

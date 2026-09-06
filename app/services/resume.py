@@ -9,7 +9,7 @@ Key invariants (§6, §8, §11, FLOW-035 of REVIEW_AND_PLAN.md):
 - Every state change and URL generation writes an AuditEvent.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.channel.media import ValidatedMedia
@@ -36,7 +36,7 @@ def ingest_resume(
         - is_new_version is False if identical checksum was found and deduplicated.
     """
     adapter = storage or get_storage_adapter()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Deduplication check: Has this candidate uploaded this exact file before?
     existing = uow.resumes.get_by_checksum(candidate_id, validated_media.checksum)
@@ -138,7 +138,7 @@ def confirm_current_resume(
         return None
 
     prev_confirmed = resume.confirmed_at.isoformat() if resume.confirmed_at else None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     resume.confirmed_at = now
 
     uow.audit_events.add(

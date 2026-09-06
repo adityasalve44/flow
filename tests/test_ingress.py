@@ -11,7 +11,7 @@ Tests:
 7. Rate limit exceeded (counted directly in Postgres) returns IngressDecision.RATE_LIMITED.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pydantic
@@ -119,7 +119,7 @@ def test_blocked_candidate_is_rejected(db):
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
-        cand.blocked_at = datetime.now(timezone.utc)
+        cand.blocked_at = datetime.now(UTC)
         uow.candidates.add(cand)
 
         event = InboundEvent(
@@ -140,7 +140,7 @@ def test_postgres_rate_limiting(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9194{uuid4().int % 100000000:08d}"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

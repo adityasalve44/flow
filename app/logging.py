@@ -27,7 +27,7 @@ import logging
 import re
 import sys
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ class LogContext:
             _ctx_turn_id: turn_id,
         }
 
-    def __enter__(self) -> "LogContext":
+    def __enter__(self) -> LogContext:
         for var, value in self._values.items():
             if value is not None:
                 self._tokens.append(var.set(value))
@@ -121,7 +121,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         obj: dict[str, Any] = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

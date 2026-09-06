@@ -11,16 +11,17 @@ Tests:
 7. Architecture test: no commit() or rollback() calls anywhere inside app/repositories.
 """
 
-from concurrent.futures import ThreadPoolExecutor
 import inspect
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
+import app.repositories
 from app.db.uow import UnitOfWork
-from app.models import Candidate, CandidateAttribute, Conversation, Message
+from app.models import Candidate, CandidateAttribute
 from app.models.enums import (
     AttributeStatusEnum,
     ChannelEnum,
@@ -31,7 +32,6 @@ from app.models.enums import (
     DirectionEnum,
     SourceEnum,
 )
-import app.repositories
 from tests.conftest import _get_test_db_url
 
 
@@ -67,10 +67,9 @@ def test_uow_rolls_back_on_exception(db):
         pass
 
     uow = UnitOfWork(session=db)
-    with pytest.raises(SimulatedTurnFailure):
-        with uow:
-            uow.candidates.get_or_create_by_phone(phone_number=phone, display_name="Failed User")
-            raise SimulatedTurnFailure("Something went wrong during turn processing")
+    with pytest.raises(SimulatedTurnFailure), uow:
+        uow.candidates.get_or_create_by_phone(phone_number=phone, display_name="Failed User")
+        raise SimulatedTurnFailure("Something went wrong during turn processing")
 
     # In the database session, candidate must NOT exist
     candidate = db.scalar(select(Candidate).where(Candidate.phone_number == phone))

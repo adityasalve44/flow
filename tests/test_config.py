@@ -3,9 +3,7 @@ tests/test_config.py — settings module unit tests.
 No database required.
 """
 
-import os
 
-import pytest
 
 from app.config import Settings, get_settings
 

@@ -18,8 +18,6 @@ Tests:
 
 from uuid import uuid4
 
-import pytest
-
 from app.agents.prompts.reply import build_reply_instruction
 from app.agents.schemas import (
     ExtractedQuestion,

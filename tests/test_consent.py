@@ -17,7 +17,7 @@ Tests:
    - Zero attributes persisted in flow.candidate_attributes while consent is pending or declined.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -25,12 +25,10 @@ import pytest
 from app.agents.prompts.consent import (
     CONSENT_DECLINED_REPLY,
     CONSENT_REASK_NOTICE,
-    CONSENT_REQUEST_NOTICE,
     CONSENT_WITHDRAWN_REPLY,
 )
 from app.db.uow import UnitOfWork
 from app.domain.consent import (
-    ConsentDecision,
     ConsentIntent,
     classify_consent,
     evaluate_consent_turn,
@@ -41,7 +39,6 @@ from app.models.enums import (
     ConversationStatusEnum,
 )
 from app.services.conversation import resolve_conversation
-
 
 # ---------------------------------------------------------------------------
 # 1. Unit Tests: classify_consent
@@ -133,7 +130,7 @@ def test_row1_first_inbound_pending_consent(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -167,7 +164,7 @@ def test_row2_candidate_replies_yes(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -198,7 +195,7 @@ def test_row3_candidate_replies_no_sticky_decline(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -223,7 +220,7 @@ def test_row3_candidate_replies_no_sticky_decline(db):
         assert conv.closed_at == t0
 
         # Subsequent message from declined candidate is sticky: never re-asked
-        t1 = datetime(2026, 9, 6, 12, 5, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 9, 6, 12, 5, 0, tzinfo=UTC)
         subsequent_decision = evaluate_consent_turn(
             candidate=cand,
             conversation=conv,
@@ -249,7 +246,7 @@ def test_row4_candidate_ignores_consent_zero_persistence(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -283,7 +280,7 @@ def test_row5_withdrawal_mid_conversation(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -294,7 +291,7 @@ def test_row5_withdrawal_mid_conversation(db):
         conv = resolve_conversation(uow, cand, now=t0)
         assert conv.status == ConversationStatusEnum.active
 
-        t1 = datetime(2026, 9, 6, 12, 10, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 9, 6, 12, 10, 0, tzinfo=UTC)
         decision = evaluate_consent_turn(
             candidate=cand,
             conversation=conv,
@@ -320,7 +317,7 @@ def test_granted_candidate_passes_through(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

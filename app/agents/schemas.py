@@ -9,8 +9,8 @@ Core requirements (§8, FLOW-018 of REVIEW_AND_PLAN.md):
 - Validation errors degrade gracefully to an empty extraction.
 """
 
-from enum import Enum
 import logging
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -103,12 +103,12 @@ class TurnExtraction(BaseModel):
     raw_message_text: str | None = None
 
     @classmethod
-    def empty(cls) -> "TurnExtraction":
+    def empty(cls) -> TurnExtraction:
         """Return a safe empty extraction."""
         return cls(intent=IntentEnum.other)
 
     @classmethod
-    def safe_parse(cls, data: Any) -> "TurnExtraction":
+    def safe_parse(cls, data: Any) -> TurnExtraction:
         """
         Safely parse raw dictionary or model output.
         Degrades gracefully to empty extraction on validation failure.

@@ -11,8 +11,9 @@ Validates:
 7. Reactive dormancy observation (Q2).
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
+
 import pytest
 
 from app.db.uow import UnitOfWork
@@ -49,7 +50,7 @@ def test_application_states_strictly_forbidden():
 
 def test_transition_matrix_legal_transitions():
     """All permitted paths through the candidate lifecycle execute cleanly."""
-    now = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 6, 12, 0, tzinfo=UTC)
 
     for source_state, target_set in ALLOWED_TRANSITIONS.items():
         for target_state in target_set:
@@ -115,7 +116,7 @@ def test_unknown_status_and_empty_reason_raise():
 
 def test_blocked_at_timestamp_maintenance():
     """Blocking sets blocked_at; unblocking clears blocked_at."""
-    now = datetime(2026, 9, 6, 15, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 6, 15, 30, tzinfo=UTC)
     cand = Candidate(
         phone_number="+919876543210",
         lifecycle_status=LifecycleStatusEnum.intake,
@@ -188,7 +189,7 @@ def test_audit_event_persisted_with_uow(db):
 
 def test_check_and_mark_dormant_reactive_only():
     """Inactivity window check transitions candidate to dormant without side effects (Q2)."""
-    now = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 6, 12, 0, tzinfo=UTC)
     cand = Candidate(phone_number="+919876543210", lifecycle_status=LifecycleStatusEnum.intake)
 
     # 1. Active recently (30 days ago) -> remains intake

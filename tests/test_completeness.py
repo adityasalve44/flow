@@ -21,7 +21,6 @@ from app.domain.completeness import (
 from app.domain.merge import Fact
 from app.domain.projection import ProfileSnapshot
 from app.domain.registry import BLOCKING_KEYS
-from app.models.enums import AttributeStatusEnum, ConfidenceEnum, DataClassEnum
 
 
 def make_fact(key: str, value: any, status: str = "current", confidence: str = "confirmed") -> Fact:

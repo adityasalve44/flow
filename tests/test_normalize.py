@@ -15,7 +15,6 @@ Tests:
 import pytest
 
 from app.domain.normalize import (
-    has_hedge_word,
     normalize_experience,
     normalize_location,
     normalize_money,
@@ -23,7 +22,6 @@ from app.domain.normalize import (
     normalize_phone,
 )
 from app.models.enums import ConfidenceEnum
-
 
 # ---------------------------------------------------------------------------
 # Money Normalisation Tests (Acceptance & Table-driven)

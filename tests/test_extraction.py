@@ -17,9 +17,7 @@ Tests:
    Verifies output_schema, output_key, tools=[], and instruction contents.
 """
 
-from typing import Any
 from unittest.mock import MagicMock
-import pytest
 
 from app.agents.extraction import (
     EXTRACTION_OUTPUT_KEY,
@@ -27,16 +25,11 @@ from app.agents.extraction import (
     ensure_valid_extraction_callback,
 )
 from app.agents.schemas import (
-    ExtractedCorrection,
-    ExtractedFact,
-    ExtractedQuestion,
     ExtractionConfidenceEnum,
     IntentEnum,
-    ResumeIntentEnum,
     TurnExtraction,
 )
 from app.models.enums import ConfidenceEnum
-
 
 # ---------------------------------------------------------------------------
 # 1. Canonical Six-Fact Extraction Test (§3)

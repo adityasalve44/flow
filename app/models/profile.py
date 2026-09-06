@@ -13,22 +13,16 @@ Currency is always explicit.
 """
 
 import uuid
-from datetime import datetime
-from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
-    Enum,
     ForeignKey,
-    Integer,
-    Numeric,
     String,
     UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 

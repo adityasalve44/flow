@@ -11,15 +11,14 @@ Core requirements (§3, §8, §19 of REVIEW_AND_PLAN.md):
     NEITHER -> warm acknowledgement, ask/reask consent, 0 attributes written.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
 import re
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import Enum
 
 from app.agents.prompts.consent import (
     CONSENT_DECLINED_REPLY,
     CONSENT_REASK_NOTICE,
-    CONSENT_REQUEST_NOTICE,
     CONSENT_WITHDRAWN_REPLY,
 )
 from app.models import Candidate, Conversation
@@ -153,7 +152,7 @@ def evaluate_consent_turn(
     - If declined, sticky decline is honored; never re-asked.
     - If withdrawn, immediately transitions to withdrawn and closes conversation.
     """
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
 
     # 1. Sticky declined candidate: never re-ask, politely close
     if candidate.consent_status == ConsentStatusEnum.declined:

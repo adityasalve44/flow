@@ -5,8 +5,8 @@ All tests use the `db` fixture which rolls back after every test,
 so the development database is never touched.
 """
 
-from tests.conftest import CandidateFactory
 from app.repositories.candidate import get_candidate_by_phone
+from tests.conftest import CandidateFactory
 
 
 def test_candidate_lookup(db):

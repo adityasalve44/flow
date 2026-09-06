@@ -11,12 +11,12 @@ Validates:
 """
 
 import hashlib
+
 import pytest
 
 from app.channel.media import (
     MAX_MEDIA_SIZE_BYTES,
     MediaValidationError,
-    detect_content_type,
     sanitize_filename,
     validate_media,
 )

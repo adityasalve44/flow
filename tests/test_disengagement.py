@@ -10,26 +10,31 @@ Tests:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import MagicMock
 from uuid import uuid4
 
+import pytest
 from google.adk.agents import BaseAgent
 from google.adk.events import Event, EventActions
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import Field
-import pytest
 
 from app.agents.policy import PolicyAgent
 from app.agents.root import create_flow_app
 from app.agents.schemas import IntentEnum, TurnExtraction
 from app.channel.inbound import InboundEvent
 from app.db.uow import UnitOfWork
-from app.domain.moderation import is_genuine_deflection, record_deflection, should_reopen_conversation
-from app.domain.policy import evaluate_policy_step
-from app.models.enums import ChannelEnum, ConsentStatusEnum, ConversationModeEnum, ConversationStatusEnum, DirectionEnum
+from app.domain.moderation import (
+    is_genuine_deflection,
+    should_reopen_conversation,
+)
+from app.models.enums import (
+    ChannelEnum,
+    ConsentStatusEnum,
+    DirectionEnum,
+)
 from app.services.turn import TurnService
 
 
@@ -40,7 +45,7 @@ class MockExtractorAgent(BaseAgent):
     def __init__(self, extraction: TurnExtraction, name: str = "extractor", **kwargs):
         super().__init__(name=name, extraction=extraction, **kwargs)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         ctx.session.state["temp:extraction"] = self.extraction.model_dump()
         yield Event(
             author=self.name,
@@ -52,7 +57,7 @@ class MockReplierAgent(BaseAgent):
     """Mock replier that counts invocations and emits text."""
     call_count: int = Field(default=0)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         directive = ctx.session.state.get("temp:directive", {})
         dir_name = directive.get("name", "ask_next")
         if dir_name == "disengage_silent":
@@ -95,7 +100,7 @@ async def test_three_consecutive_refusals_produce_two_replies_then_silence(db):
     """
     phone = f"+9198{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

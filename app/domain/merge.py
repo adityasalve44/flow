@@ -21,7 +21,6 @@ from uuid import UUID
 from app.models.enums import (
     AttributeStatusEnum,
     ConfidenceEnum,
-    DataClassEnum,
     SourceEnum,
 )
 

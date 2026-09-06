@@ -17,9 +17,8 @@ Core requirements (§3, §8, FLOW-028, FLOW-029 of REVIEW_AND_PLAN.md):
   * Invariant: Flow never explains the moderation mechanism, rules, or strikes to the candidate.
 """
 
-from datetime import datetime, timezone
 import re
-from typing import Any
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.db.uow import UnitOfWork
@@ -166,7 +165,7 @@ def block_candidate(
     Transitions candidate lifecycle to blocked and sets candidate.blocked_at.
     Ingress will reject and short-circuit immediately.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     from app.domain.lifecycle import transition_candidate_lifecycle
     from app.models.enums import LifecycleStatusEnum
 
@@ -198,11 +197,11 @@ def block_candidate(
 def unblock_candidate(
     uow: UnitOfWork,
     candidate: Candidate,
-    target_status: "LifecycleStatusEnum | str" = "intake",
+    target_status: LifecycleStatusEnum | str = "intake",
     reason: str = "Administrative unblock",
 ) -> None:
     """Admin path: unblock a candidate and restore to a valid active/dormant status."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     from app.domain.lifecycle import transition_candidate_lifecycle
 
     transition_candidate_lifecycle(

@@ -12,9 +12,8 @@ Key normalization domains:
 5. Phone (E.164 with default region).
 """
 
-from dataclasses import dataclass
 import re
-from typing import Any
+from dataclasses import dataclass
 
 from app.models.enums import ConfidenceEnum
 

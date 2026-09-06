@@ -11,6 +11,7 @@ Invariants tested:
 """
 
 from decimal import Decimal
+
 import pytest
 
 from app.domain.merge import Fact

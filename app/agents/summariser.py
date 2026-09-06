@@ -9,8 +9,8 @@ Core requirements (§8, FLOW-031 of REVIEW_AND_PLAN.md):
 - Invariant: Never claims to remember something absent from the store.
 """
 
-from datetime import datetime, timezone
 import logging
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -145,7 +145,7 @@ def close_and_summarise_conversation(
     """
     Mark conversation as closed, generate summary, and persist to conversations.summary.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     conversation.status = ConversationStatusEnum.closed
     conversation.closed_at = now
 

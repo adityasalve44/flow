@@ -13,15 +13,12 @@ from __future__ import annotations
 import pytest
 
 from app.models import (
-    Candidate,
-    Conversation,
-    LifecycleStatusEnum,
     ConsentStatusEnum,
-    ConversationStatusEnum,
     ConversationModeEnum,
+    ConversationStatusEnum,
+    LifecycleStatusEnum,
 )
 from tests.conftest import CandidateFactory
-
 
 # ---------------------------------------------------------------------------
 # Lifecycle enum invariant — no application-pipeline states allowed (Q8)
@@ -66,7 +63,6 @@ def test_candidate_defaults(db):
 
 def test_candidate_uuid_primary_key(db):
     """Candidate.id is a UUID (not an integer)."""
-    import uuid
     candidate = CandidateFactory.build(db)
     # After flush, id is assigned by the server — should be a UUID object
     # (may be None before flush if server_default hasn't run)

@@ -33,7 +33,7 @@ def get_session_factory():
     )
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     """FastAPI dependency: yields a database session per request."""
     SessionLocal = get_session_factory()
     db = SessionLocal()

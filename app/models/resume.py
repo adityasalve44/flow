@@ -8,8 +8,9 @@ Key invariants (§6, §8, FLOW-035 of REVIEW_AND_PLAN.md):
 - Binary data is never stored in the database — only storage pointers (bucket, object_key).
 """
 
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -27,6 +28,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.enums import SourceEnum
+
+if TYPE_CHECKING:
+    from app.models.candidate import Candidate
 
 
 class Resume(Base):
@@ -100,7 +104,7 @@ class Resume(Base):
     )
 
     # Relationships
-    candidate: Mapped["Candidate"] = relationship(  # type: ignore[name-defined]
+    candidate: Mapped[Candidate] = relationship(  # type: ignore[name-defined]
         "Candidate",
         back_populates="resumes",
     )

@@ -30,8 +30,12 @@ from app.domain.identity import (
     update_candidate_identity,
 )
 from app.domain.policy import evaluate_policy_step
-from app.models import Candidate, CandidateProfile, Conversation
-from app.models.enums import ChannelEnum, ConsentStatusEnum, ConversationModeEnum, ConversationStatusEnum
+from app.models import Candidate, CandidateProfile
+from app.models.enums import (
+    ChannelEnum,
+    ConsentStatusEnum,
+    ConversationModeEnum,
+)
 
 
 def test_greeting_branch_1_facts_in_first_message():

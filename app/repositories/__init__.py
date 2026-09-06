@@ -6,6 +6,7 @@ by the UnitOfWork context manager in app/db/uow.py.
 """
 
 from app.repositories.attribute import AttributeRepository
+from app.repositories.audit import AuditRepository
 from app.repositories.candidate import (
     CandidateRepository,
     get_candidate_by_id,
@@ -19,7 +20,6 @@ from app.repositories.conversation import (
 )
 from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
-from app.repositories.audit import AuditRepository
 
 __all__ = [
     "AttributeRepository",

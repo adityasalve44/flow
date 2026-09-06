@@ -13,7 +13,6 @@ Core requirements (§4, §5, §6, §8, §19 of REVIEW_AND_PLAN.md):
 """
 
 from typing import Any
-import uuid
 
 from google.adk.sessions import (
     BaseSessionService,

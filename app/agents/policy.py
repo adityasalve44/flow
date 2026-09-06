@@ -12,9 +12,9 @@ Core responsibilities (§8, FLOW-019 of REVIEW_AND_PLAN.md):
     "declined_keys": updated set/list of declined keys
 """
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from dataclasses import asdict
-from typing import Any, Callable
+from typing import Any
 
 from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -52,7 +52,7 @@ class PolicyAgent(BaseAgent):
 
     async def _run_async_impl(
         self, ctx: InvocationContext
-    ) -> AsyncGenerator[Event, None]:
+    ) -> AsyncGenerator[Event]:
         # 1. Read input state
         state = ctx.session.state
         candidate_id = state.get("candidate_id")

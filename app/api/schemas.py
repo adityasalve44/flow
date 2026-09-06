@@ -2,8 +2,7 @@
 app/api/schemas.py — Pydantic DTOs for ingress, webhooks, and API payloads.
 """
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -43,7 +42,7 @@ class InboundEvent(BaseModel):
         description="Unique message ID assigned by the channel (for idempotency)",
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="UTC timestamp when message was received",
     )
 

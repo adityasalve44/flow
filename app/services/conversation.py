@@ -5,7 +5,7 @@ Determines whether to continue an active conversation, close it and open
 a new intake conversation, or open in refresh mode.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.config import get_settings
 from app.db.uow import UnitOfWork
@@ -35,7 +35,7 @@ def resolve_conversation(
     - If consent is not yet granted -> open in mode=consent.
     """
     settings = get_settings()
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     active_window = timedelta(hours=settings.active_window_hours)
     stale_window = timedelta(days=settings.stale_profile_days)
 

@@ -6,7 +6,6 @@ configures routers (webhook, health), and handles application lifecycle.
 """
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
 from app.api.middleware import RequestCorrelationMiddleware
 from app.api.webhook import router as webhook_router

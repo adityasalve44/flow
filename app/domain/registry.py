@@ -16,7 +16,6 @@ The registry is plain data — no database, no model calls, no side effects.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from app.models.enums import DataClassEnum
 

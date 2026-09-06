@@ -6,7 +6,7 @@ Key invariants:
 - Transaction boundaries belong strictly to the UnitOfWork.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select, update
@@ -92,5 +92,5 @@ class ResumeRepository:
         """Mark a resume as confirmed by the candidate at the given timestamp."""
         resume = self.get_by_id(resume_id)
         if resume is not None:
-            resume.confirmed_at = confirmed_at or datetime.now(timezone.utc)
+            resume.confirmed_at = confirmed_at or datetime.now(UTC)
         return resume

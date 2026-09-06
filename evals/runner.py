@@ -9,15 +9,14 @@ Executes all 23 scenarios from §15 of REVIEW_AND_PLAN.md:
 - Clean pass/fail reporting per scenario.
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
-import yaml
+from uuid import uuid4
 
-from google.adk.sessions import InMemorySessionService
+import yaml
 from sqlalchemy.orm import Session
 
 from app.agents.policy import evaluate_policy_step
@@ -27,13 +26,8 @@ from app.agents.schemas import (
     IntentEnum,
     TurnExtraction,
 )
-from app.channel.inbound import InboundEvent
-from app.database import get_session_factory
 from app.db.uow import UnitOfWork
-from app.domain.completeness import BLOCKING_KEYS
-from app.domain.consent import ConsentIntent, classify_consent, evaluate_consent_turn
-from app.domain.identity import evaluate_greeting_directive
-from app.domain.lifecycle import check_and_mark_dormant, transition_candidate_lifecycle
+from app.domain.consent import evaluate_consent_turn
 from app.domain.moderation import check_abuse_lexicon
 from app.models.attribute import CandidateAttribute
 from app.models.enums import (
@@ -75,7 +69,7 @@ class ScenarioResult:
 def load_scenarios(path: Path | str | None = None) -> list[dict[str, Any]]:
     """Load scenarios from YAML specification file."""
     p = Path(path) if path else SCENARIOS_PATH
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data.get("scenarios", [])
 
@@ -185,7 +179,7 @@ async def run_scenario(scenario_data: dict[str, Any], session: Session) -> Scena
 
     uow = UnitOfWork(session=session)
     phone = f"+9188{scenario_id:02d}{uuid4().int % 1000000:06d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     # 1. Setup candidate initial state
     with uow:

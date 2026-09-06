@@ -15,16 +15,16 @@ Tests:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from google.adk.agents import BaseAgent
 from google.adk.events import Event, EventActions
-from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-import pytest
+from pydantic import Field
 
 from app.agents.policy import PolicyAgent
 from app.agents.root import create_flow_app
@@ -39,10 +39,6 @@ from app.db.uow import UnitOfWork
 from app.models.enums import ChannelEnum, ConsentStatusEnum
 from app.services.turn import SAFE_FALLBACK_REPLY, TurnService
 
-
-from pydantic import Field
-
-
 # ---------------------------------------------------------------------------
 # Test Agent Mocks for Fast, Deterministic Unit Runs
 # ---------------------------------------------------------------------------
@@ -55,7 +51,7 @@ class MockExtractorAgent(BaseAgent):
     def __init__(self, extraction: TurnExtraction, name: str = "extractor", **kwargs):
         super().__init__(name=name, extraction=extraction, **kwargs)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         ctx.session.state["temp:extraction"] = self.extraction.model_dump()
         yield Event(
             author=self.name,
@@ -71,7 +67,7 @@ class MockReplierAgent(BaseAgent):
     def __init__(self, reply_text: str, name: str = "replier", **kwargs):
         super().__init__(name=name, reply_text=reply_text, **kwargs)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         content = types.Content(
             role="model",
             parts=[types.Part.from_text(text=self.reply_text)],
@@ -82,7 +78,7 @@ class MockReplierAgent(BaseAgent):
 class FailingAgent(BaseAgent):
     """Mock agent that raises an error to test degradation."""
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         raise RuntimeError("Simulated Gemini API 503 Service Unavailable")
         yield
 
@@ -102,7 +98,7 @@ async def test_full_turn_intake_flow(db):
     """
     phone = f"+9191{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     # 1. Pre-seed candidate with granted consent
     with uow:
@@ -192,7 +188,7 @@ async def test_consent_gate_turn_handling(db):
     """
     phone = f"+9191{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     session_service = InMemorySessionService()
     turn_service = TurnService(
@@ -232,7 +228,7 @@ async def test_turn_error_degradation(db):
     """
     phone = f"+9191{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

@@ -27,7 +27,7 @@ Tests:
    - Rung 13: acknowledge_profile_ready (all baseline fields confirmed)
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -56,12 +56,10 @@ from app.models.enums import (
     AttributeStatusEnum,
     ConfidenceEnum,
     ConsentStatusEnum,
-    ConversationModeEnum,
     DataClassEnum,
     LifecycleStatusEnum,
 )
 from app.services.conversation import resolve_conversation
-
 
 # ---------------------------------------------------------------------------
 # 1. Completeness and Readiness Tests
@@ -80,7 +78,7 @@ def test_readiness_all_blocking_fields_present():
             confidence=ConfidenceEnum.confirmed.value,
             status=AttributeStatusEnum.current.value,
             data_class=DataClassEnum.operational.value,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         for key in BLOCKING_KEYS
     ]
@@ -103,7 +101,7 @@ def test_readiness_individually_missing_blocking_field():
                 confidence=ConfidenceEnum.confirmed.value,
                 status=AttributeStatusEnum.current.value,
                 data_class=DataClassEnum.operational.value,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             for key in remaining_keys
         ]
@@ -124,7 +122,7 @@ def test_readiness_ready_without_non_blocking_fields():
             confidence=ConfidenceEnum.confirmed.value,
             status=AttributeStatusEnum.current.value,
             data_class=DataClassEnum.operational.value,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         for key in BLOCKING_KEYS
     ]
@@ -151,7 +149,7 @@ def test_scoring_never_reasks_just_answered_field():
             confidence=ConfidenceEnum.confirmed.value,
             status=AttributeStatusEnum.current.value,
             data_class=DataClassEnum.operational.value,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
     ]
     fields_to_ask = score_missing_fields(facts)
@@ -323,7 +321,7 @@ def test_rung8_resolve_conflict(db):
         conv = resolve_conversation(uow, cand)
 
         # Pre-seed candidate with authoritative 10 years experience
-        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
+        t0 = datetime(2026, 9, 1, 10, 0, tzinfo=UTC)
         initial_fact = TurnExtraction(
             intent=IntentEnum.provide_info,
             facts=[
@@ -338,7 +336,7 @@ def test_rung8_resolve_conflict(db):
         evaluate_policy_step(uow, cand, conv, initial_fact, now=t0)
 
         # Inbound says 2 years with low confidence / inferred
-        t1 = datetime(2026, 9, 6, 10, 0, tzinfo=timezone.utc)
+        t1 = datetime(2026, 9, 6, 10, 0, tzinfo=UTC)
         conflicting_fact = TurnExtraction(
             intent=IntentEnum.provide_info,
             facts=[
@@ -479,6 +477,7 @@ def test_rung13_acknowledge_profile_ready(db):
 async def test_policy_agent_async_invocation(db):
     """Test PolicyAgent BaseAgent execution via _run_async_impl."""
     from unittest.mock import MagicMock
+
     from app.agents.policy import PolicyAgent
 
     uow = UnitOfWork(session=db)

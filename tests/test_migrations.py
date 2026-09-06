@@ -9,11 +9,11 @@ Tests that:
 - ADK tables in the `adk` schema are completely ignored by autogenerate.
 """
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
-import pytest
 from sqlalchemy import create_engine, text
 
 from app.models import Base

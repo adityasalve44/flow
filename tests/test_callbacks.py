@@ -19,19 +19,15 @@ Tests:
 import json
 import logging
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
-from google.adk.agents.context import Context
 from google.adk.models.llm_request import LlmRequest
 from google.genai import types
-import pytest
 
 from app.agents.callbacks import (
     MAX_INPUT_TEXT_LENGTH,
     after_tool_callback,
     before_model_callback,
     before_tool_callback,
-    estimate_tokens,
     neutralise_injection_markers,
     on_model_error_callback,
 )

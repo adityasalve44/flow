@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models import CandidateSkill, CandidateLocationPref, CandidateRolePref
+from app.models import CandidateLocationPref, CandidateRolePref, CandidateSkill
 from tests.conftest import CandidateFactory
 
 

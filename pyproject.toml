@@ -47,10 +47,28 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+ignore = [
+    "E501",
+    # UP042 wants enum.StrEnum. Our enums are persisted through SQLAlchemy
+    # Enum(...) columns and compared by .value; StrEnum also changes __str__
+    # from "SourceEnum.resume" to "resume", which would silently alter log
+    # output and error messages. (str, Enum) is the deliberate idiom here.
+    "UP042",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends()/Query() in argument defaults is the FastAPI idiom, not a mutable
+# default argument bug.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Body",
+]
 
 [tool.mypy]
 python_version = "3.14"

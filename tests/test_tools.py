@@ -22,7 +22,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from google.adk.tools.function_tool import FunctionTool
-import pytest
 
 from app.db.uow import UnitOfWork
 from app.models import CandidateProfile

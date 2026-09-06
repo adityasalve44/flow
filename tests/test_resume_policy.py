@@ -9,7 +9,7 @@ Validates (§8, §11, FLOW-036 of REVIEW_AND_PLAN.md):
 - No repeat ask: A confirmed or asked resume is NEVER requested again in that conversation.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -18,7 +18,7 @@ from app.agents.schemas import IntentEnum, TurnExtraction
 from app.channel.media import validate_media
 from app.db.uow import UnitOfWork
 from app.domain.policy import evaluate_policy_step
-from app.models import CandidateAttribute, CandidateProfile
+from app.models import CandidateAttribute
 from app.models.enums import (
     AttributeStatusEnum,
     ConfidenceEnum,
@@ -28,7 +28,7 @@ from app.models.enums import (
     SourceEnum,
 )
 from app.models.resume import Resume
-from app.services.resume import confirm_current_resume, ingest_resume
+from app.services.resume import ingest_resume
 from app.storage.local import LocalStorageAdapter
 
 
@@ -119,7 +119,7 @@ def test_resume_policy_confirmation_flow(db, candidate_and_conversation):
     # Populate baseline facts and a pre-existing unconfirmed/stale resume
     with uow:
         _populate_baseline_profile(uow, cand_id)
-        stale_date = datetime.now(timezone.utc) - timedelta(days=400)
+        stale_date = datetime.now(UTC) - timedelta(days=400)
         resume = Resume(
             candidate_id=cand_id,
             version=1,

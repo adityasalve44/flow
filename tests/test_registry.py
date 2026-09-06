@@ -21,7 +21,6 @@ from app.domain.registry import (
 )
 from app.models.enums import DataClassEnum
 
-
 EXPECTED_BLOCKING_KEYS = {
     "desired_role",
     "experience_years",

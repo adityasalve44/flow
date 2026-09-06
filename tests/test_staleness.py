@@ -11,16 +11,16 @@ Tests:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from google.adk.agents import BaseAgent
 from google.adk.events import Event, EventActions
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import Field
-import pytest
 
 from app.agents.policy import PolicyAgent
 from app.agents.root import create_flow_app
@@ -44,12 +44,10 @@ from app.models.enums import (
     ChannelEnum,
     ConfidenceEnum,
     ConsentStatusEnum,
-    ConversationModeEnum,
     DataClassEnum,
     LifecycleStatusEnum,
     SourceEnum,
 )
-from app.services.conversation import resolve_conversation
 from app.services.turn import TurnService
 
 
@@ -60,7 +58,7 @@ class MockExtractorAgent(BaseAgent):
     def __init__(self, extraction: TurnExtraction, name: str = "extractor", **kwargs):
         super().__init__(name=name, extraction=extraction, **kwargs)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         ctx.session.state["temp:extraction"] = self.extraction.model_dump()
         yield Event(
             author=self.name,
@@ -72,7 +70,7 @@ class MockReplierAgent(BaseAgent):
     """Mock replier that records calls and formats text."""
     call_count: int = Field(default=0)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         self.call_count += 1
         directive = ctx.session.state.get("temp:directive", {})
         dir_name = directive.get("name", "ask_next")
@@ -83,7 +81,7 @@ class MockReplierAgent(BaseAgent):
 
 def test_is_candidate_profile_stale():
     """Verify staleness detection against configured threshold."""
-    now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
     profile_fresh = CandidateProfile(
         candidate_id=uuid4(),
         last_refreshed_at=now - timedelta(days=30),
@@ -105,7 +103,7 @@ def test_mark_candidate_profile_stale_never_deletes_anything(db):
     """
     phone = f"+9198{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -164,8 +162,8 @@ async def test_400_day_old_candidate_returns_in_refresh_mode(db):
     """
     phone = f"+9195{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t_past = datetime(2025, 8, 1, 12, 0, 0, tzinfo=timezone.utc)
-    t_now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t_past = datetime(2025, 8, 1, 12, 0, 0, tzinfo=UTC)
+    t_now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     # 1. Pre-seed a candidate onboarded 400+ days ago
     with uow:
@@ -242,8 +240,8 @@ async def test_reconfirmation_restores_stale_fact_without_duplicate(db):
     """
     phone = f"+9194{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t_past = datetime(2025, 8, 1, 12, 0, 0, tzinfo=timezone.utc)
-    t_now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t_past = datetime(2025, 8, 1, 12, 0, 0, tzinfo=UTC)
+    t_now = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     # Pre-seed candidate with 1 stale attribute
     with uow:
@@ -313,7 +311,7 @@ def test_reconfirm_stale_attribute_direct(db):
     """Verify programmatic reconfirmation helper restores stale attribute."""
     phone = f"+9193{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

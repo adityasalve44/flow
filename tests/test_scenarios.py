@@ -44,6 +44,7 @@ def test_tool_trajectory_declarations():
     Asserts no identity parameters are exposed to LLMs.
     """
     from google.adk.tools import FunctionTool
+
     from app.tools import FLOW_V1_TOOLS
 
     assert len(FLOW_V1_TOOLS) == 4

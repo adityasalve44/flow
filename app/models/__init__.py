@@ -5,7 +5,15 @@ Import from here to get everything:
     from app.models import Base, Candidate, Conversation, Message
 """
 
+from app.models.attribute import CandidateAttribute
+from app.models.audit import AuditEvent
 from app.models.base import Base, TimestampMixin
+from app.models.candidate import (
+    Candidate,
+    CandidateProfile,
+    Conversation,
+    Message,
+)
 from app.models.enums import (
     AttributeStatusEnum,
     ChannelEnum,
@@ -18,21 +26,13 @@ from app.models.enums import (
     LifecycleStatusEnum,
     SourceEnum,
 )
-from app.models.candidate import (
-    Candidate,
-    CandidateProfile,
-    Conversation,
-    Message,
-)
-from app.models.attribute import CandidateAttribute
-from app.models.profile import (
-    CandidateSkill,
-    CandidateRolePref,
-    CandidateLocationPref,
-)
 from app.models.moderation import ModerationEvent
+from app.models.profile import (
+    CandidateLocationPref,
+    CandidateRolePref,
+    CandidateSkill,
+)
 from app.models.resume import Resume
-from app.models.audit import AuditEvent
 
 __all__ = [
     "Base",

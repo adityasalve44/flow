@@ -11,11 +11,10 @@ Core requirements (§8, §16, FLOW-034 of REVIEW_AND_PLAN.md):
 - Extensible hook for antivirus scanning (Phase 6).
 """
 
-from dataclasses import dataclass
 import hashlib
-from pathlib import Path
 import re
-from typing import Any
+from dataclasses import dataclass
+from pathlib import Path
 
 # Hard caps and allow-lists
 MAX_MEDIA_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB

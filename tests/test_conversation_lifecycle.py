@@ -8,7 +8,7 @@ Tests:
 4. Candidate with pending consent opens in mode=consent.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from app.db.uow import UnitOfWork
@@ -32,7 +32,7 @@ def test_23h_boundary_same_conversation(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -61,7 +61,7 @@ def test_25h_boundary_new_conversation_profile_intact(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9192{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -109,7 +109,7 @@ def test_400_days_boundary_refresh_mode_facts_stale_not_deleted(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9193{uuid4().int % 100000000:08d}"
-    t0 = datetime(2025, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2025, 1, 1, 10, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

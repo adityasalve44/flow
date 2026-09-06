@@ -11,16 +11,16 @@ Tests:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from google.adk.agents import BaseAgent
 from google.adk.events import Event, EventActions
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import Field
-import pytest
 
 from app.agents.policy import PolicyAgent
 from app.agents.root import create_flow_app
@@ -36,7 +36,6 @@ from app.models.enums import (
     ChannelEnum,
     ConsentStatusEnum,
     ConversationStatusEnum,
-    DirectionEnum,
 )
 from app.services.turn import TurnService
 
@@ -48,7 +47,7 @@ class MockExtractorAgent(BaseAgent):
     def __init__(self, extraction: TurnExtraction, name: str = "extractor", **kwargs):
         super().__init__(name=name, extraction=extraction, **kwargs)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         ctx.session.state["temp:extraction"] = self.extraction.model_dump()
         yield Event(
             author=self.name,
@@ -60,7 +59,7 @@ class MockReplierAgent(BaseAgent):
     """Mock replier that records calls."""
     call_count: int = Field(default=0)
 
-    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(self, ctx) -> AsyncGenerator[Event]:
         directive = ctx.session.state.get("temp:directive", {})
         dir_name = directive.get("name", "ask_next")
         if dir_name == "disengage_silent":
@@ -109,7 +108,7 @@ async def test_first_abuse_gets_calm_warning_and_records_event(db):
     """
     phone = f"+9198{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -205,7 +204,7 @@ async def test_extractor_abuse_signal_escalates(db):
     """
     phone = f"+9197{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -269,7 +268,7 @@ async def test_admin_block_shortcircuits_at_first_gate(db):
     """
     phone = f"+9196{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)

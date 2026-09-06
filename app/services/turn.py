@@ -10,35 +10,22 @@ Orchestrates the entire turn lifecycle:
 6. Outbound message persistence & timestamp updates.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import logging
-from typing import Any
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from google.adk.apps import App
-from google.adk.events import Event
 from google.adk.runners import Runner
 from google.adk.sessions import BaseSessionService
 from google.genai import types
 
+from app.agents.callbacks import SAFE_FALLBACK_REPLY
 from app.agents.root import create_flow_app
 from app.agents.session import get_or_create_adk_session, get_session_service
 from app.channel.inbound import InboundEvent
 from app.db.uow import UnitOfWork
 from app.domain.consent import evaluate_consent_turn
-from app.models import Message
-from app.models.enums import (
-    ChannelEnum,
-    ConversationModeEnum,
-    ConversationStatusEnum,
-    DirectionEnum,
-)
-from app.services.conversation import resolve_conversation
-
-logger = logging.getLogger(__name__)
-
-from app.agents.callbacks import SAFE_FALLBACK_REPLY
 from app.domain.moderation import (
     CALM_ABUSE_WARNING,
     check_abuse_lexicon,
@@ -46,6 +33,15 @@ from app.domain.moderation import (
     reopen_conversation,
     should_reopen_conversation,
 )
+from app.models import Message
+from app.models.enums import (
+    ChannelEnum,
+    ConversationStatusEnum,
+    DirectionEnum,
+)
+from app.services.conversation import resolve_conversation
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -94,7 +90,7 @@ class TurnService:
             now
             or getattr(inbound, "received_at", None)
             or getattr(inbound, "timestamp", None)
-            or datetime.now(timezone.utc)
+            or datetime.now(UTC)
         )
         phone = getattr(inbound, "phone_number", None) or getattr(inbound, "sender_phone", "")
         message_body = getattr(inbound, "message", None) or getattr(inbound, "body", "") or ""
@@ -323,8 +319,10 @@ class TurnService:
 
             uow.commit()
 
-        # Step 3: Consent granted -> run ADK agent pipeline
-        adk_session = await get_or_create_adk_session(
+        # Step 3: Consent granted -> run ADK agent pipeline.
+        # Called for its side effect: ensures the ADK session exists and carries
+        # the trusted candidate_id in state before the first model call.
+        await get_or_create_adk_session(
             session_service=self.session_service,
             candidate=candidate,
             conversation=conversation,
@@ -402,11 +400,11 @@ class TurnService:
                 direction=DirectionEnum.outbound,
                 channel_message_id=f"out-{uuid4()}",
                 body=reply_text,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             uow.messages.add(outbound_msg)
             if conv_record:
-                conv_record.last_outbound_at = datetime.now(timezone.utc)
+                conv_record.last_outbound_at = datetime.now(UTC)
             uow.commit()
 
             mode_val = (

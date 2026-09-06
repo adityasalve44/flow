@@ -11,7 +11,7 @@ Step 0 of the turn engine:
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from uuid import UUID
 
@@ -52,7 +52,7 @@ def check_rate_limit(
     Check if the candidate has exceeded the per-phone rate limit in Postgres.
     Returns True if rate limit is exceeded, False otherwise.
     """
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     window_start = current_time - timedelta(seconds=60)
 
     statement = select(func.count(Message.id)).where(

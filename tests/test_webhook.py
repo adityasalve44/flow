@@ -19,20 +19,19 @@ Tests:
    - Round trip yields reply text and 2 messages in the database.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from google.adk.sessions import InMemorySessionService
-import pytest
 
-from app.api.schemas import InboundEvent
 from app.api.webhook import get_turn_service
 from app.config import get_settings
 from app.database import get_db
 from app.db.uow import UnitOfWork
 from app.main import app
-from app.models.enums import ChannelEnum, ConsentStatusEnum, DirectionEnum
+from app.models.enums import ChannelEnum, DirectionEnum
 from app.services.turn import TurnService
 
 
@@ -196,7 +195,7 @@ def test_webhook_blocked_candidate(client, db):
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
-        cand.blocked_at = datetime.now(timezone.utc)
+        cand.blocked_at = datetime.now(UTC)
         uow.candidates.add(cand)
         uow.commit()
 
@@ -217,7 +216,7 @@ def test_webhook_rate_limited_candidate(client, db):
     """Candidate exceeding per-minute threshold receives 429 Too Many Requests."""
     phone = f"+9198{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(UTC)
 
     # Seed 20 inbound messages in the last 60 seconds
     with uow:

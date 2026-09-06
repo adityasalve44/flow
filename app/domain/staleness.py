@@ -11,13 +11,12 @@ Core requirements (§3, §8, FLOW-030 of REVIEW_AND_PLAN.md):
 - Opens by asking what they are doing and looking for now.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from app.config import get_settings
 from app.db.uow import UnitOfWork
-from app.domain.merge import Fact
 from app.domain.projection import rebuild_projection
 from app.models import Candidate, CandidateAttribute, CandidateProfile
 from app.models.enums import (
@@ -38,7 +37,7 @@ def is_candidate_profile_stale(
         return False
     settings = get_settings()
     days = stale_days if stale_days is not None else settings.stale_profile_days
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     return (current_time - profile.last_refreshed_at) > timedelta(days=days)
 
 
@@ -55,7 +54,7 @@ def mark_candidate_profile_stale(
     - Lifecycle status moves from profile_ready -> intake (FLOW-047).
     - Clears current projection assertions so old preferences are not asserted as current.
     """
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     current_attrs = uow.attributes.get_current_for_candidate(candidate.id)
 
     stale_count = 0
@@ -126,7 +125,7 @@ def reconfirm_stale_attribute(
     - If a new/updated value is supplied, updates the value while retaining record continuity.
     - Triggers projection rebuild.
     """
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     stale_attrs = get_stale_attributes(uow, candidate_id)
     matching = next((a for a in stale_attrs if a.key == key), None)
 

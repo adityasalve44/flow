@@ -8,7 +8,6 @@ Core requirements (§8, FLOW-018 of REVIEW_AND_PLAN.md):
 - Validation failure degrades to an empty extraction rather than raising.
 """
 
-from typing import Any
 
 from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext

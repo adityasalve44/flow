@@ -16,15 +16,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_session_factory
 from app.repositories.attribute import AttributeRepository
+from app.repositories.audit import AuditRepository
 from app.repositories.candidate import CandidateRepository
 from app.repositories.conversation import (
     ConversationRepository,
     MessageRepository,
 )
+from app.repositories.moderation import ModerationEventRepository
 from app.repositories.profile import ProfileRepository
 from app.repositories.resume import ResumeRepository
-from app.repositories.moderation import ModerationEventRepository
-from app.repositories.audit import AuditRepository
 
 
 class UnitOfWork:
@@ -51,7 +51,7 @@ class UnitOfWork:
         self.moderation_events = ModerationEventRepository(session)
         self.audit_events = AuditRepository(session)
 
-    def __enter__(self) -> "UnitOfWork":
+    def __enter__(self) -> UnitOfWork:
         if self.session is None:
             self.session = self._session_factory()
             self._init_repositories(self.session)
@@ -83,7 +83,7 @@ class UnitOfWork:
             self.session.rollback()
 
 
-def get_uow() -> Generator[UnitOfWork, None, None]:
+def get_uow() -> Generator[UnitOfWork]:
     """FastAPI dependency yielding a UnitOfWork instance per request."""
     with UnitOfWork() as uow:
         yield uow

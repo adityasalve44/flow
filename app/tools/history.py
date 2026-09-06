@@ -14,7 +14,7 @@ from uuid import UUID
 
 from google.adk.tools import ToolContext
 
-from app.models.enums import AttributeStatusEnum, ConversationStatusEnum
+from app.models.enums import AttributeStatusEnum
 
 # Fixed budget bounds: keep total recall payload strictly bounded
 MAX_SUMMARIES = 5

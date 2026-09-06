@@ -18,11 +18,8 @@ Tests:
 
 from uuid import uuid4
 
-import pytest
-
 from app.domain.merge import Fact
-from app.domain.policy import ADJACENCY_MAP, score_missing_fields
-from app.domain.registry import BLOCKING_KEYS
+from app.domain.policy import score_missing_fields
 
 
 def make_fact(key: str, value: any, status: str = "current", confidence: str = "confirmed") -> Fact:

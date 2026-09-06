@@ -16,7 +16,6 @@ Tests:
 """
 
 from unittest.mock import MagicMock
-import pytest
 
 from app.agents.prompts.reply import (
     WORKED_EXAMPLES,

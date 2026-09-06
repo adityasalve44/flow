@@ -13,10 +13,8 @@ Core requirements (§8, FLOW-023 of REVIEW_AND_PLAN.md):
 """
 
 import hmac
-from typing import Any
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 

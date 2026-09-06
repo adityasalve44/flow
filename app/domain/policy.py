@@ -12,17 +12,16 @@ Core responsibilities (§8, FLOW-019 of REVIEW_AND_PLAN.md):
 8. Zero model calls — 100% deterministic, testable, and reproducible.
 """
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from decimal import Decimal
 import re
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.agents.schemas import ExtractionConfidenceEnum, IntentEnum, TurnExtraction
 from app.db.uow import UnitOfWork
 from app.domain.completeness import is_profile_ready
-from app.domain.identity import names_are_compatible, update_candidate_identity
+from app.domain.identity import names_are_compatible
 from app.domain.merge import Fact, MergeContext, merge_facts
 from app.domain.moderation import (
     is_genuine_deflection,
@@ -244,7 +243,7 @@ def evaluate_policy_step(
     5. Evaluate ladder to choose ONE directive.
     6. Commit changes.
     """
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
 
     # Fetch all existing facts for candidate
     db_attrs = uow.attributes.get_all_for_candidate(candidate.id)
@@ -656,7 +655,7 @@ def evaluate_policy_step(
                     reason="All six baseline fields confirmed; profile ready",
                 )
             elif current_resume is not None:
-                now_dt = now or datetime.now(timezone.utc)
+                now_dt = now or datetime.now(UTC)
                 is_fresh = (
                     current_resume.confirmed_at is not None
                     and (now_dt - current_resume.confirmed_at).days <= 365

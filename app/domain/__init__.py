@@ -3,10 +3,10 @@ app/domain package — pure business logic (no ORM, no HTTP, no models).
 """
 
 from app.domain.merge import (
+    SOURCE_RANKS,
     Fact,
     MergeContext,
     MergeResult,
-    SOURCE_RANKS,
     merge_facts,
 )
 from app.domain.normalize import (

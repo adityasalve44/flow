@@ -5,8 +5,8 @@ Matches §6 of REVIEW_AND_PLAN.md:
 | audit_events | Who changed what | actor_type (system/agent/recruiter) · actor_id · entity_type · entity_id · action · before jsonb · after jsonb · created_at |
 """
 
-from datetime import datetime
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     DateTime,

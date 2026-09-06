@@ -4,13 +4,17 @@ app/models/moderation.py — Moderation events and audit trails (FLOW-029).
 Captures abuse, escalation, and block events (§3, §8, FLOW-029 of REVIEW_AND_PLAN.md).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.candidate import Candidate, Conversation, Message
 
 
 class ModerationEvent(Base):
@@ -39,7 +43,7 @@ class ModerationEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
     # Relationships

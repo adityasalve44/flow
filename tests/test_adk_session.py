@@ -10,7 +10,7 @@ Tests:
 5. DatabaseSessionService integration: verified against PostgreSQL adk schema.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -37,7 +37,7 @@ async def test_session_state_initialisation(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -70,7 +70,7 @@ async def test_session_reuse_within_window(db):
     """
     uow = UnitOfWork(session=db)
     phone = f"+9191{uuid4().int % 100000000:08d}"
-    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 9, 6, 12, 0, 0, tzinfo=UTC)
 
     with uow:
         cand = uow.candidates.get_or_create_by_phone(phone)
@@ -108,8 +108,9 @@ async def test_schema_placement_in_adk(db, test_engine):
     Public schema contains zero tables.
     """
     # Prepare tables via DatabaseSessionService using the test database
-    from tests.conftest import _get_test_db_url
     from sqlalchemy.ext.asyncio import create_async_engine
+
+    from tests.conftest import _get_test_db_url
 
     test_url = _get_test_db_url()
     async_test_engine = create_async_engine(

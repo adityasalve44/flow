@@ -11,7 +11,6 @@ Key invariants tested:
 - Signed URL generation writes an AuditEvent with actor details.
 """
 
-from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -167,22 +166,21 @@ def test_database_enforces_single_current_invariant_via_partial_unique(db, candi
         uow.commit()
 
     # Bypassing the service and inserting a second row with is_current=True
-    with pytest.raises(IntegrityError):
-        with uow:
-            r2 = Resume(
-                candidate_id=candidate_id,
-                version=2,
-                bucket="resumes",
-                object_key="candidates/1/resumes/r2.pdf",
-                filename="r2.pdf",
-                content_type="application/pdf",
-                size_bytes=100,
-                checksum="hash2",
-                is_current=True,  # Violates partial unique constraint!
-                source=SourceEnum.candidate_stated,
-            )
-            uow.resumes.add(r2)
-            uow.commit()
+    with pytest.raises(IntegrityError), uow:
+        r2 = Resume(
+            candidate_id=candidate_id,
+            version=2,
+            bucket="resumes",
+            object_key="candidates/1/resumes/r2.pdf",
+            filename="r2.pdf",
+            content_type="application/pdf",
+            size_bytes=100,
+            checksum="hash2",
+            is_current=True,  # Violates partial unique constraint!
+            source=SourceEnum.candidate_stated,
+        )
+        uow.resumes.add(r2)
+        uow.commit()
 
 
 def test_confirm_current_resume_sets_timestamp_and_audits(db, candidate_id, storage):

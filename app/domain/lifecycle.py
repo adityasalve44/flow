@@ -15,7 +15,7 @@ Strict separation of concerns (Q8):
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -160,7 +160,7 @@ def transition_candidate_lifecycle(
             reason=reason,
         )
 
-    transition_time = now or datetime.now(timezone.utc)
+    transition_time = now or datetime.now(UTC)
 
     # Apply state mutation
     candidate.lifecycle_status = target_enum
@@ -217,10 +217,10 @@ def check_and_mark_dormant(
     if last_activity_at is None:
         return False
 
-    current_time = now or datetime.now(timezone.utc)
+    current_time = now or datetime.now(UTC)
     # Ensure timezone awareness
     if last_activity_at.tzinfo is None:
-        last_activity_at = last_activity_at.replace(tzinfo=timezone.utc)
+        last_activity_at = last_activity_at.replace(tzinfo=UTC)
 
     delta = current_time - last_activity_at
     if delta.days >= inactivity_window_days:

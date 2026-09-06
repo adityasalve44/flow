@@ -13,16 +13,16 @@ Tests:
 """
 
 import itertools
+
 import pytest
 
 from app.domain.merge import (
+    SOURCE_RANKS,
     Fact,
     MergeContext,
-    SOURCE_RANKS,
     merge_facts,
 )
 from app.models.enums import (
-    AttributeStatusEnum,
     ConfidenceEnum,
     DataClassEnum,
     SourceEnum,
