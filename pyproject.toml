@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "flow"
+version = "0.1.0"
+description = "AI-powered WhatsApp recruitment intake assistant"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "sqlalchemy==2.0.52",
+    "psycopg[binary]==3.3.5",
+    "alembic==1.19.2",
+    "google-adk==2.8.0",
+    "google-genai==2.22.0",
+    "pydantic-settings>=2.0",
+    "python-dotenv==1.2.3",
+    "python-multipart==0.0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio",
+    "httpx==0.28.1",
+    "ruff",
+    "mypy",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "live_model: requires a live Gemini API call (excluded from CI)",
+    "integration: requires external services",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = false
+ignore_missing_imports = true
