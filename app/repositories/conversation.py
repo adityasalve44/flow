@@ -95,6 +95,9 @@ class MessageRepository:
         )
         return list(reversed(self.session.scalars(statement).all()))
 
+    # Alias for readability
+    get_recent_by_conversation = get_recent
+
     def create(
         self,
         conversation_id: UUID | str,
