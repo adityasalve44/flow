@@ -190,6 +190,8 @@ REGISTRY: dict[str, KeySpec] = {k.key: k for k in [
     # Candidates can volunteer any information; it is preserved but not projected.
 ]}
 
+KEY_REGISTRY = REGISTRY
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -235,3 +237,7 @@ def is_blocking(key: str) -> bool:
 def all_blocking_keys() -> list[str]:
     """Return all keys that are in the profile-readiness baseline."""
     return [spec.key for spec in REGISTRY.values() if spec.blocking]
+
+
+get_key_spec = lookup_key
+get_blocking_keys = all_blocking_keys
