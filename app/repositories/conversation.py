@@ -132,6 +132,29 @@ class MessageRepository:
         )
         return list(self.session.scalars(statement).all())
 
+    def get_page_by_conversation(
+        self, conversation_id: UUID | str, limit: int = 50, offset: int = 0
+    ) -> tuple[list[Message], int]:
+        """Paginated chronological transcript for a conversation (FLOW-037).
+
+        Returns (messages, total_count) — used by the recruiter transcript
+        view, where a conversation can hold far more messages than should
+        ever be returned in one response.
+        """
+        from sqlalchemy import func
+
+        total = self.session.scalar(
+            select(func.count()).where(Message.conversation_id == conversation_id)
+        ) or 0
+        statement = (
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.asc(), Message.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self.session.scalars(statement).all()), total
+
     def create(
         self,
         conversation_id: UUID | str,

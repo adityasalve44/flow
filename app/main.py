@@ -8,6 +8,7 @@ configures routers (webhook, health), and handles application lifecycle.
 from fastapi import FastAPI
 
 from app.api.middleware import RequestCorrelationMiddleware
+from app.api.recruiter import router as recruiter_router
 from app.api.webhook import router as webhook_router
 from app.logging import configure_logging, get_logger
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
 
     # Routes
     application.include_router(webhook_router)
+    application.include_router(recruiter_router)
 
     @application.get("/health")
     def health():

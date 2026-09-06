@@ -15,7 +15,7 @@ Key design decisions (from §6 of REVIEW_AND_PLAN.md):
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -239,6 +239,17 @@ class Message(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        # Python-side default, not just server_default: Postgres' now() is
+        # transaction-scoped, so several messages inserted in the same
+        # transaction (routine — a turn writes inbound and outbound in one
+        # commit) would otherwise share an identical timestamp, and with a
+        # random UUID primary key there is no reliable secondary sort key
+        # to recover true order. datetime.now(UTC) is evaluated once per
+        # row in Python, giving each message a distinct, correctly ordered
+        # timestamp. server_default stays as a fallback for any insert that
+        # bypasses the ORM. No migration needed — this is client-side only,
+        # invisible to the schema Alembic compares against.
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
