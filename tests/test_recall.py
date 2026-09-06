@@ -32,14 +32,29 @@ from app.tools.history import (
 
 
 def test_recall_tool_declaration_exposes_no_identity_parameters():
-    """Verify ADK FunctionTool for recall_candidate_history hides tool_context and exposes only topic."""
+    """Verify ADK FunctionTool for recall_candidate_history hides tool_context and exposes only topic.
+
+    ADK 2.8 emits the schema on `parameters_json_schema`, leaving `parameters`
+    as None. Asserting against `parameters` therefore passes unconditionally and
+    would not catch an identity parameter — this test reads the field ADK
+    actually populates, matching tests/test_tools.py.
+    """
     tool = FunctionTool(recall_candidate_history)
     decl = tool._get_declaration()
 
     assert decl.name == "recall_candidate_history"
-    assert "tool_context" not in (decl.parameters.properties if decl.parameters else {})
-    if decl.parameters and decl.parameters.properties:
-        assert set(decl.parameters.properties.keys()) == {"topic"}
+
+    schema = decl.parameters_json_schema or {}
+    props = schema.get("properties", {})
+
+    # The tool must expose exactly one parameter: the free-text topic.
+    assert set(props.keys()) == {"topic"}
+
+    # Identity must never be model-supplied.
+    assert "tool_context" not in props
+    assert "candidate_id" not in props
+    assert "phone_number" not in props
+    assert "conversation_id" not in props
 
 
 def test_budget_bound_over_200_message_history(db):

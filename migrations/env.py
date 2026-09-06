@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 # Load environment variables from .env
 load_dotenv()
 
-from app.models import Base
+from app.models import Base  # noqa: E402  (requires sys.path above)
 
 # Alembic Config object
 try:

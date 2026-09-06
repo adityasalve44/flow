@@ -95,9 +95,7 @@ def is_genuine_deflection(
     """
     if refusal_signal:
         return True
-    if demanded_other and is_off_topic:
-        return True
-    return False
+    return bool(demanded_other and is_off_topic)
 
 
 def record_deflection(

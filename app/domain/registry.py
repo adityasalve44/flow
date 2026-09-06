@@ -117,16 +117,18 @@ REGISTRY: dict[str, KeySpec] = {k.key: k for k in [
         description="Resume availability and confirmation status",
     ),
 
-    # ── Personal — stored, restricted, never projected (Q5) ─────────────────
-    # Name is personal because it is PII even though it helps the conversation.
-    # It is stored on candidates.display_name / candidate_profiles.full_name
-    # separately, but as an attribute key it is classified personal.
+    # ── Operational — required for recruitment operations ───────────────────
+    # A name is required to submit a candidate to a client, so it does not
+    # meet Q5's definition of personal ("not required for recruitment").
+    # Reclassified operational; visible in recruiter search and list views.
     KeySpec(
         key="full_name",
-        data_class=DataClassEnum.personal,
+        data_class=DataClassEnum.operational,
         importance=0.35,
         description="Candidate's full name (also stored on candidate.display_name)",
     ),
+
+    # ── Personal — stored, restricted, never projected (Q5) ─────────────────
     KeySpec(
         key="date_of_birth",
         data_class=DataClassEnum.personal,

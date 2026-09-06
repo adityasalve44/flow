@@ -102,7 +102,7 @@ class Candidate(Base, TimestampMixin):
         cascade="all, delete-orphan",
         foreign_keys="[Message.candidate_id]",
     )
-    resumes: Mapped[list["Resume"]] = relationship(
+    resumes: Mapped[list["Resume"]] = relationship(  # noqa: UP037  (TYPE_CHECKING-only name)
         "Resume",
         back_populates="candidate",
         cascade="all, delete-orphan",

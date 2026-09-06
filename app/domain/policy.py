@@ -214,7 +214,7 @@ def score_missing_fields(
         key=lambda item: item[1],
         reverse=True,
     )
-    for candidate_key, score in remaining_scores:
+    for candidate_key, _score in remaining_scores:
         if candidate_key in adjacent_allowed:
             result.append(candidate_key)
             break

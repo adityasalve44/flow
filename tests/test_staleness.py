@@ -285,7 +285,7 @@ async def test_reconfirmation_restores_stale_fact_without_duplicate(db):
         ),
     )
 
-    res = await turn_service.run(
+    await turn_service.run(
         InboundEvent(
             channel=ChannelEnum.simulator,
             phone_number=phone,

@@ -47,9 +47,9 @@ class ModerationEvent(Base):
     )
 
     # Relationships
-    candidate: Mapped["Candidate"] = relationship("Candidate")
-    conversation: Mapped["Conversation | None"] = relationship("Conversation")
-    message: Mapped["Message | None"] = relationship("Message")
+    candidate: Mapped["Candidate"] = relationship("Candidate")  # noqa: UP037
+    conversation: Mapped["Conversation | None"] = relationship("Conversation")  # noqa: UP037
+    message: Mapped["Message | None"] = relationship("Message")  # noqa: UP037
 
     def __repr__(self) -> str:
         return (

@@ -86,7 +86,7 @@ def test_filename_sanitisation():
         ("///absolute/path/cv.docx", "cv.docx"),
     ]
 
-    for raw, expected in test_cases:
+    for raw, _expected in test_cases:
         sanitized = sanitize_filename(raw)
         assert ".." not in sanitized
         assert "/" not in sanitized

@@ -104,7 +104,7 @@ class Resume(Base):
     )
 
     # Relationships
-    candidate: Mapped["Candidate"] = relationship(
+    candidate: Mapped["Candidate"] = relationship(  # noqa: UP037  (TYPE_CHECKING-only name)
         "Candidate",
         back_populates="resumes",
     )

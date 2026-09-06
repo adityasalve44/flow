@@ -105,7 +105,9 @@ def test_candidate_snapshot_excludes_sensitive_attributes():
             "notice_period": 30,
             "work_mode": "hybrid",
             "completeness_score": 0.85,
-            # Personal (must be EXCLUDED)
+            # full_name is operational (required for recruitment submission),
+            # unlike phone_number, which is identity and is always excluded
+            # regardless of data_class.
             "full_name": "Deepa Sharma",
             "phone_number": "+919876543210",
             "date_of_birth": "1994-08-15",
@@ -140,10 +142,12 @@ def test_candidate_snapshot_excludes_sensitive_attributes():
     assert snapshot["notice_period"] == 30
     assert snapshot["work_mode"] == "hybrid"
     assert snapshot["completeness_score"] == 0.85
+    assert snapshot["full_name"] == "Deepa Sharma"
+
+    # Identity must never be exposed, regardless of data_class
+    assert "phone_number" not in snapshot
 
     # Personal attributes must be absent
-    assert "full_name" not in snapshot
-    assert "phone_number" not in snapshot
     assert "date_of_birth" not in snapshot
     assert "age" not in snapshot
     assert "marital_status" not in snapshot

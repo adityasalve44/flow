@@ -362,10 +362,9 @@ async def run_scenario(scenario_data: dict[str, Any], session: Session) -> Scena
                 turn_passed = False
                 turn_error = f"Expected reply to contain any of {exp_contains}"
 
-        if turn_spec.get("expected_silence"):
-            if reply_text != "":
-                turn_passed = False
-                turn_error = f"Expected silence, but got reply: '{reply_text}'"
+        if turn_spec.get("expected_silence") and reply_text != "":
+            turn_passed = False
+            turn_error = f"Expected silence, but got reply: '{reply_text}'"
 
         if turn_spec.get("expected_closed"):
             with uow:

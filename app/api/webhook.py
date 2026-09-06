@@ -115,7 +115,7 @@ async def handle_inbound_webhook(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing ingress boundary checks",
-        )
+        ) from err
 
     # Handle Replay (Idempotent return)
     if ingress.decision == IngressDecision.REPLAY:
@@ -170,7 +170,7 @@ async def handle_inbound_webhook(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing the conversation turn",
-        )
+        ) from err
 
     return WebhookResponse(
         status="ok",

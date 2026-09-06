@@ -47,7 +47,7 @@ def test_property_no_non_operational_attribute_in_projection():
 
     snapshot: ProfileSnapshot = rebuild_projection(facts)
 
-    for key, val in snapshot.operational_attributes.items():
+    for key, _val in snapshot.operational_attributes.items():
         spec = KEY_REGISTRY.get(key)
         if spec:
             assert spec.data_class == DataClassEnum.operational, (

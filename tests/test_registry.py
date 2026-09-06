@@ -35,9 +35,15 @@ KNOWN_PROTECTED_KEYS = {
 }
 
 KNOWN_PERSONAL_KEYS = {
-    "full_name", "date_of_birth", "age", "marital_status",
+    "date_of_birth", "age", "marital_status",
     "family_circumstances", "nationality",
 }
+
+# full_name is deliberately operational, not personal (see decision below):
+# a name is required to submit a candidate to a client, so it does not meet
+# Q5's definition of personal ("not required for recruitment"). It is visible
+# in recruiter search and list views like any other operational field.
+KNOWN_OPERATIONAL_KEYS = {"full_name"}
 
 
 def test_every_registry_key_has_explicit_data_class():
@@ -90,6 +96,14 @@ def test_protected_keys_classified_correctly(key: str):
 @pytest.mark.parametrize("key", sorted(KNOWN_PERSONAL_KEYS))
 def test_personal_keys_classified_correctly(key: str):
     assert get_data_class(key) == DataClassEnum.personal
+
+
+@pytest.mark.parametrize("key", sorted(KNOWN_OPERATIONAL_KEYS))
+def test_full_name_is_operational_not_personal(key: str):
+    """full_name is required for recruitment submission, so it is operational —
+    visible in recruiter search/list views, unlike genuinely personal fields
+    such as date_of_birth or marital_status."""
+    assert get_data_class(key) == DataClassEnum.operational
 
 
 def test_current_ctc_is_operational():

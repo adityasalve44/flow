@@ -34,6 +34,7 @@ BLOCKING_KEYS: frozenset[str] = frozenset({
 class ProfileSnapshot:
     """The derived projection consumed by matching and recruiter search views."""
 
+    full_name: str | None = None
     current_role: str | None = None
     current_company: str | None = None
     experience_years: float | None = None
@@ -108,6 +109,9 @@ def rebuild_projection(attributes: list[Fact]) -> ProfileSnapshot:
                 snapshot.notice_period_days = int(val.get("days", 0))
             elif isinstance(val, int):
                 snapshot.notice_period_days = val
+
+        elif key == "full_name":
+            snapshot.full_name = str(val) if val is not None else None
 
         elif key == "current_role":
             snapshot.current_role = str(val) if val is not None else None

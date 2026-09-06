@@ -30,7 +30,6 @@ async def main() -> int:
     with session_factory() as session:
         for scen in scenarios:
             scen_id = scen["id"]
-            name = scen["name"]
             desc = scen["description"]
 
             try:

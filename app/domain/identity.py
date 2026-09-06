@@ -59,9 +59,8 @@ def names_are_compatible(name_a: str | None, name_b: str | None) -> bool:
     first_b = tokens_b[0]
 
     # Check if one is a 1-letter initial of the other (e.g. 'r' vs 'rahul')
-    if len(first_a) == 1 or len(first_b) == 1:
-        if first_a[0] == first_b[0]:
-            return True
+    if (len(first_a) == 1 or len(first_b) == 1) and first_a[0] == first_b[0]:
+        return True
 
     if first_a != first_b:
         return False
@@ -74,10 +73,8 @@ def names_are_compatible(name_a: str | None, name_b: str | None) -> bool:
             return True
         if len(last_a) == 1 and last_b.startswith(last_a):
             return True
-        if len(last_b) == 1 and last_a.startswith(last_b):
-            return True
         # Different non-initial surnames (e.g. "Rahul Verma" vs "Rahul Sharma")
-        return False
+        return len(last_b) == 1 and last_a.startswith(last_b)
 
     # One is single name "Rahul", other is "Rahul Kumar" or "Rahul K" -> compatible
     return True

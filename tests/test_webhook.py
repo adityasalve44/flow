@@ -216,7 +216,6 @@ def test_webhook_rate_limited_candidate(client, db):
     """Candidate exceeding per-minute threshold receives 429 Too Many Requests."""
     phone = f"+9198{uuid4().int % 100000000:08d}"
     uow = UnitOfWork(session=db)
-    t0 = datetime.now(UTC)
 
     # Seed 20 inbound messages in the last 60 seconds
     with uow:

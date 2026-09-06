@@ -1,6 +1,6 @@
 # Flow Rebuild — Findings and Architectural Decisions
 
-*Last updated: 2026-09-06 · Covers Phases 0 through 4 (FLOW-001 to FLOW-036)*
+*Last updated: 2026-09-06 · Covers Phases 0 through 4 (FLOW-001 to FLOW-036), plus the pre-Phase-5 review pass*
 
 ---
 
@@ -55,14 +55,14 @@
 ### Finding: The Precedence Ladder & Conflict Resolution
 - **Problem:** Candidates often provide contradictory statements, or LLMs make faulty inferences from ambiguous text.
 - **Decision (FLOW-013, FLOW-014):**
-  - 7x7 precedence matrix:
-    1. `recruiter_verified` (Rank 1 — highest authority)
-    2. `candidate_confirmed` (Rank 2)
-    3. `resume` (Rank 3 — opaque document parsing)
-    4. `candidate_stated` (Rank 4)
-    5. `system_calculated` (Rank 5)
-    6. `llm_inferred` (Rank 6)
-    7. `channel_metadata` (Rank 7 — lowest authority)
+  - 7x7 precedence matrix (rank matches `app/domain/merge.py`'s `_PRECEDENCE` table exactly — higher number wins):
+    1. `recruiter_verified` (rank 6 — highest authority; no model output ever overwrites it)
+    2. `candidate_confirmed` (rank 5)
+    3. `candidate_stated` (rank 4)
+    4. `resume` (rank 3 — an opaque parsed document; sits below what the candidate says today, because resumes go stale)
+    5. `system_calculated` (rank 2)
+    6. `llm_inferred` (rank 1)
+    7. `channel_metadata` (rank 0 — lowest authority; the WhatsApp contact name, icebreaker only)
   - Higher rank strictly supersedes lower rank.
   - Same rank with different values: candidate-stated facts in the same conversation supersede silently; cross-conversation contradictions mark the old fact `conflicted` and trigger a `resolve_conflict` directive.
   - Money normaliser handles Indian denominations (`12 LPA` -> `1,200,000`, `1.5 Cr` -> `15,000,000`, `80k/month` -> `960,000`). Ambiguous statements (e.g. `about 80k`) store `status=ambiguous` and never project.
@@ -101,3 +101,17 @@
 ### Finding: Server Defaults on Partial Indexes and Boolean Columns
 - **Problem:** When Alembic autogenerates comparisons against PostgreSQL, columns with `default=True` or `default=SourceEnum.candidate_stated` in SQLAlchemy without matching `server_default` clauses emit spurious `modify_default` diffs during `test_autogenerate_produces_no_diff`.
 - **Decision:** Every column created with a server default in Alembic migrations must declare matching `server_default=text("true")` and `server_default=SourceEnum.candidate_stated.value` in the model definition.
+
+---
+
+## 8. Pre-Phase-5 Review Findings
+
+*Reviewed on 2026-09-06 before starting Phase 5. Full review in `docs/REVIEW_AND_PLAN.md`.*
+
+### Finding: `full_name` reclassified from `personal` to `operational`
+- **Problem:** The registry originally classified `full_name` as `personal`, on the reasoning that a name is PII. But `app/domain/identity.py` writes `profile.full_name` directly onto the `candidate_profiles` projection row — bypassing `rebuild_projection`'s operational-only filter entirely, since name confirmation doesn't go through the attribute/merge pipeline the way other facts do. That meant a `personal`-classified field was already sitting, unfiltered, on the one table the recruiter API and future matching system are meant to read as "safe."
+- **Decision:** A name is required to submit a candidate to a client, so it does not meet Q5's own definition of personal data ("not required for recruitment"). `full_name` is now `operational` — visible in recruiter search and list views like any other operational field, and `ProfileSnapshot` in `app/domain/projection.py` carries it explicitly so it flows through the same projection path as every other operational fact rather than around it.
+- **Still true:** `phone_number` remains excluded from every tool and API response regardless of `data_class` — that exclusion is about identity, not sensitivity, and is unaffected by this change.
+
+### Finding: `docs/tasks.md` FLOW-037 onward not yet checked off
+- **Status at review time:** Phases 0–4 complete (FLOW-001 through FLOW-036, plus FLOW-045 and FLOW-047 added by the Q4/Q8 decisions). Phase 5 (FLOW-037 to FLOW-040) begins next.

@@ -231,12 +231,14 @@ def validate_media(
     # If caller supplied a declared content_type, verify compatibility
     if content_type:
         clean_declared = content_type.split(";")[0].strip().lower()
-        if clean_declared != detected_mime and clean_declared not in (
-            "application/octet-stream",
-            "binary/octet-stream",
+        # A declared type that neither matches the sniffed type nor permits
+        # this extension is a mismatch; generic octet-stream is always allowed.
+        if (
+            clean_declared != detected_mime
+            and clean_declared
+            not in ("application/octet-stream", "binary/octet-stream")
+            and declared_ext not in ALLOWED_MIME_TYPES.get(clean_declared, ())
         ):
-            # Check if declared MIME allows this extension
-            if declared_ext not in ALLOWED_MIME_TYPES.get(clean_declared, ()):
                 raise MediaValidationError(
                     f"Declared MIME type '{clean_declared}' contradicts detected '{detected_mime}'.",
                     code="mime_mismatch",

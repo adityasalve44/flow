@@ -127,7 +127,7 @@ def test_close_and_summarise_conversation(db):
         assert conv.status == ConversationStatusEnum.active
         assert conv.summary is None
 
-        summary = close_and_summarise_conversation(uow, conv)
+        close_and_summarise_conversation(uow, conv)
         uow.commit()
 
     with uow:
