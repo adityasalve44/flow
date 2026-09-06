@@ -157,6 +157,8 @@ def evaluate_consent_turn(
 
     # 1. Sticky declined candidate: never re-ask, politely close
     if candidate.consent_status == ConsentStatusEnum.declined:
+        conversation.status = ConversationStatusEnum.closed
+        conversation.closed_at = current_time
         return ConsentDecision(
             intent=ConsentIntent.REFUSE,
             directive="already_declined",

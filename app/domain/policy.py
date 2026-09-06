@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.agents.schemas import ExtractionConfidenceEnum, TurnExtraction
+from app.agents.schemas import ExtractionConfidenceEnum, IntentEnum, TurnExtraction
 from app.db.uow import UnitOfWork
 from app.domain.completeness import is_profile_ready
 from app.domain.identity import names_are_compatible, update_candidate_identity
@@ -547,7 +547,17 @@ def evaluate_policy_step(
             reason="Off-topic question without answers",
         )
 
-    # Rung 10: clarify_name (contact name conflicts with profile name; yields to facts)
+    # Rung 10: clarify_name (contact name conflicts with profile name or self-identified name)
+    elif (
+        getattr(extraction, "name_claim", None)
+        and candidate.display_name
+        and not names_are_compatible(candidate.display_name, extraction.name_claim)
+    ):
+        chosen_directive = PolicyDirective(
+            name="clarify_name",
+            reason="Candidate declared name conflicts with WhatsApp contact name",
+            detail=f"contact={candidate.display_name}, declared={extraction.name_claim}",
+        )
     elif (
         not extraction.facts
         and candidate.display_name
@@ -559,6 +569,25 @@ def evaluate_policy_step(
             reason="Candidate WhatsApp contact name conflicts with full_name",
             detail=f"contact={candidate.display_name}, profile={profile.full_name}",
         )
+    elif extraction.intent == IntentEnum.greet and not extraction.facts:
+        if conversation.mode == ConversationModeEnum.refresh:
+            chosen_directive = PolicyDirective(
+                name="greet_returning",
+                fields_to_ask=["desired_role"],
+                reason="Returning candidate in refresh mode; ask current role target",
+            )
+        else:
+            from app.domain.identity import evaluate_greeting_directive
+            g_dir, g_ctx = evaluate_greeting_directive(
+                contact_name=candidate.display_name,
+                profile_name=profile.full_name,
+                has_extracted_facts=bool(current_facts),
+            )
+            chosen_directive = PolicyDirective(
+                name=g_dir,
+                reason="Candidate greeting evaluated via greeting policy",
+                detail=str(g_ctx),
+            )
 
     # Check missing fields for rungs 11, 12, 13
     else:

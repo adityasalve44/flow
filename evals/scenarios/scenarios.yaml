@@ -1,0 +1,322 @@
+# evals/scenarios/scenarios.yaml
+# Specification of the 23 standard scenarios from §15 of REVIEW_AND_PLAN.md.
+
+scenarios:
+  - id: 1
+    name: "bare_hi_with_contact_name"
+    description: "Bare Hi with a contact name -> greets by name, asks what they need"
+    initial_state:
+      consent_status: "granted"
+      display_name: "Rohan Sharma"
+    turns:
+      - input: "Hi"
+        expected_directive: ["greet_with_contact_name", "ask_need", "greet", "ask_next"]
+        expected_reply_contains: ["Rohan"]
+    final_assertions:
+      candidate_attributes_count: 0
+
+  - id: 2
+    name: "bare_hi_without_name"
+    description: "Bare Hi with no name -> asks who it is speaking with"
+    initial_state:
+      consent_status: "granted"
+      display_name: null
+    turns:
+      - input: "Hi"
+        expected_directive: ["greet_and_ask_name", "ask_name", "greet", "ask_need"]
+    final_assertions:
+      candidate_attributes_count: 0
+
+  - id: 3
+    name: "contact_name_conflicts_with_profile"
+    description: "Contact name conflicts with profile name -> clarifies, writes nothing"
+    initial_state:
+      consent_status: "granted"
+      display_name: "Rohan Sharma"
+      profile:
+        full_name: "Rohan Sharma"
+    turns:
+      - input: "Actually, my name is Priya Verma."
+        expected_directive: ["clarify_name"]
+    final_assertions:
+      profile_fields:
+        full_name: "Rohan Sharma"
+
+  - id: 4
+    name: "six_facts_in_first_message"
+    description: "First message carries six facts -> all six extracted, none re-asked"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I am looking for a Python Developer role with 5 years experience in Pune. My current CTC is 12 LPA, expected 18 LPA, and notice period is 30 days."
+        expected_directive: ["acknowledge_profile_ready", "ask_resume"]
+    final_assertions:
+      lifecycle_status: "profile_ready"
+      candidate_attributes_count: 7
+
+  - id: 5
+    name: "what_is_ctc_interruption"
+    description: "What is CTC? mid-question -> glossary answer, question re-asked"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "What does CTC mean?"
+        expected_directive: ["answer_glossary", "redirect", "ask_next"]
+        expected_reply_contains: ["Cost to Company", "salary", "package"]
+
+  - id: 6
+    name: "off_topic_job_question"
+    description: "Off-topic job question -> redirect, no opening confirmed"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "Do you have any openings for commercial airline pilots or neurosurgeons?"
+        expected_directive: ["redirect", "ask_next"]
+
+  - id: 7
+    name: "two_refusals_call_offered"
+    description: "Two refusals -> call offered"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I don't want to tell you my current salary."
+        expected_directive: ["ask_next"]
+      - input: "I am not telling you my expected salary either."
+        expected_directive: ["offer_call"]
+    final_assertions:
+      deflection_count: 2
+
+  - id: 8
+    name: "three_refusals_silence"
+    description: "Three refusals -> silence, no model call"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+      deflection_count: 2
+    turns:
+      - input: "Stop asking me questions, I will not share anything."
+        expected_silence: true
+        expected_closed: true
+    final_assertions:
+      conversation_status: "closed"
+      deflection_count: 3
+
+  - id: 9
+    name: "abuse_escalation_and_silence"
+    description: "Abuse once -> warning; twice -> escalation and silence"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "Shut up you idiot, stop bothering me"
+        expected_directive: ["warn_abuse"]
+        expected_reply_contains: ["respectful"]
+      - input: "Fuck you and your system"
+        expected_silence: true
+        expected_closed: true
+    final_assertions:
+      conversation_status: "escalated"
+      abuse_count: 2
+
+  - id: 10
+    name: "ambiguous_ctc"
+    description: "about 80k a month -> ambiguous, nothing projected, clarification asked"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I make about 80k a month or so."
+        expected_directive: ["confirm_ambiguity", "ask_next"]
+    final_assertions:
+      profile_fields:
+        current_ctc_annual: null
+
+  - id: 11
+    name: "contextual_number_resolution"
+    description: "12 after an expected-CTC question -> resolves from context"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+      pending_field: "expected_ctc"
+    turns:
+      - input: "12"
+        expected_directive: ["ask_next", "acknowledge_fact"]
+    final_assertions:
+      profile_fields:
+        expected_ctc_annual: 1200000.0
+
+  - id: 12
+    name: "bare_number_no_context"
+    description: "12 with no pending question -> clarification, not a guess"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "12"
+        expected_directive: ["confirm_ambiguity", "ask_next"]
+
+  - id: 13
+    name: "same_conversation_correction"
+    description: "Same-conversation correction 4->5 years -> applies silently"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I have 4 years of experience."
+      - input: "Actually sorry, I have 5 years of experience."
+    final_assertions:
+      profile_fields:
+        experience_years: 5.0
+
+  - id: 14
+    name: "cross_conversation_contradiction"
+    description: "Cross-conversation contradiction -> reconfirmation requested"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+      historical_attributes:
+        - key: "experience_years"
+          value: 5.0
+          raw_text: "5 years"
+          status: "current"
+    turns:
+      - input: "I only have 3 years of experience."
+        expected_directive: ["resolve_conflict", "confirm_ambiguity", "ask_next"]
+
+  - id: 15
+    name: "return_after_25_hours"
+    description: "Return after 25 hours -> new conversation, profile intact"
+    initial_state:
+      consent_status: "granted"
+      previous_conversation_closed_hours_ago: 25
+      profile:
+        current_role: "Senior Backend Developer"
+        experience_years: 6.0
+      historical_attributes:
+        - key: "current_role"
+          value: "Senior Backend Developer"
+          status: "current"
+        - key: "experience_years"
+          value: 6.0
+          status: "current"
+    turns:
+      - input: "Hello again"
+        expected_directive: ["ack_and_continue_intake", "ask_need", "greet", "ask_next"]
+    final_assertions:
+      profile_fields:
+        current_role: "Senior Backend Developer"
+        experience_years: 6.0
+
+  - id: 16
+    name: "return_after_400_days_staleness"
+    description: "Return after 400 days -> refresh mode, no stale assertions"
+    initial_state:
+      consent_status: "granted"
+      previous_conversation_closed_days_ago: 400
+      lifecycle_status: "profile_ready"
+      profile:
+        current_role: "Software Engineer"
+        experience_years: 4.0
+      historical_attributes:
+        - key: "current_role"
+          value: "Software Engineer"
+          status: "current"
+        - key: "experience_years"
+          value: 4.0
+          status: "current"
+    turns:
+      - input: "Hi, I am looking for new opportunities."
+        expected_directive: ["greet_and_ask_name", "greet_returning", "ask_next", "greet"]
+    final_assertions:
+      conversation_mode: "refresh"
+      lifecycle_status: "intake"
+
+  - id: 17
+    name: "honesty_absent_fact"
+    description: "I already told you that for an absent fact -> honest re-ask"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I already told you my driver's license number."
+        expected_directive: ["ask_next"]
+
+  - id: 18
+    name: "resume_exists_no_re_request"
+    description: "Resume exists -> confirmation asked, no file re-requested"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+      baseline_facts_complete: true
+      resume_confirmed: true
+    turns:
+      - input: "My details are all up to date."
+        expected_directive: ["acknowledge_profile_ready"]
+
+  - id: 19
+    name: "personal_disclosure_data_classification"
+    description: "Personal disclosure (can't relocate, wife works in Pune) -> relocation operational, reason personal"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I can only work in Pune because my wife works there and we cannot relocate."
+    final_assertions:
+      attribute_data_classes:
+        location_preference: "operational"
+
+  - id: 20
+    name: "off_domain_fact_preserved"
+    description: "Off-domain fact (I completed Computer Engineering) -> preserved as extra, not discarded"
+    initial_state:
+      consent_status: "granted"
+      mode: "intake"
+    turns:
+      - input: "I completed Computer Engineering from Pune University."
+    final_assertions:
+      candidate_attributes_present:
+        - "education_level"
+
+  - id: 21
+    name: "first_contact_ever"
+    description: "First contact ever -> notice + consent ask; zero rows in candidate_attributes"
+    initial_state:
+      consent_status: "pending"
+    turns:
+      - input: "Hi, I want to find a job."
+        expected_directive: ["ask_consent"]
+        expected_reply_contains: ["agree", "consent", "permission"]
+    final_assertions:
+      candidate_attributes_count: 0
+
+  - id: 22
+    name: "consent_declined_sticky"
+    description: "Consent declined -> one courteous close; decline is sticky and never re-asked"
+    initial_state:
+      consent_status: "pending"
+    turns:
+      - input: "No, I do not consent to storing my data."
+        expected_directive: ["consent_declined"]
+        expected_closed: true
+      - input: "Can you help me find a job anyway?"
+        expected_directive: ["already_declined"]
+        expected_closed: true
+    final_assertions:
+      candidate_attributes_count: 0
+
+  - id: 23
+    name: "facts_pre_consent"
+    description: "First message full of facts, pre-consent -> nothing persisted, consent asked, facts re-collected next turn"
+    initial_state:
+      consent_status: "pending"
+    turns:
+      - input: "I am a Senior Java Developer with 8 years experience in Bengaluru looking for 30 LPA."
+        expected_directive: ["ask_consent"]
+      - input: "Yes, I agree."
+        expected_directive: ["consent_granted"]
+    final_assertions:
+      conversation_mode: "intake"

@@ -27,6 +27,15 @@ class ProfileRepository:
         )
         return self.session.scalar(statement)
 
+    def get_or_create(self, candidate_id: UUID | str) -> CandidateProfile:
+        """Fetch or initialize a candidate profile projection."""
+        profile = self.get_by_candidate_id(candidate_id)
+        if profile is None:
+            profile = CandidateProfile(candidate_id=candidate_id)
+            self.session.add(profile)
+            self.session.flush()
+        return profile
+
     def add(self, profile: CandidateProfile) -> CandidateProfile:
         """Stage a profile for insertion."""
         self.session.add(profile)
