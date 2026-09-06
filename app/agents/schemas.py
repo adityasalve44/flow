@@ -100,6 +100,7 @@ class TurnExtraction(BaseModel):
     abuse_signal: bool = False
     name_claim: str | None = None
     resume_intent: ResumeIntentEnum = ResumeIntentEnum.none
+    raw_message_text: str | None = None
 
     @classmethod
     def empty(cls) -> "TurnExtraction":

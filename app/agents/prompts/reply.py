@@ -72,6 +72,18 @@ WORKED_EXAMPLES: dict[str, list[str]] = {
         "Your profile is looking great! Do you have an updated resume (PDF or DOCX) you can share with us here?",
         "We have your key details noted down. Could you send over a copy of your CV so we can start matching you to open roles?",
     ],
+    "confirm_resume": [
+        "I already have your resume from earlier — is that still the latest one?",
+        "We have your resume on file from our previous interaction. Is that still up to date?",
+    ],
+    "acknowledge_resume_confirmed": [
+        "Perfect, thank you for confirming! Your details are all set and we will be in touch as soon as a matching role opens up.",
+        "Great, thanks for confirming! We'll keep your profile active for upcoming opportunities.",
+    ],
+    "acknowledge_resume": [
+        "Thank you for sharing your resume! We've saved it to your profile and will review it for matching opportunities.",
+        "Got your resume, thanks! Your profile is complete and our team will review matching roles.",
+    ],
     "ask_next": [
         "Which technologies do you work with most — Python, Java, or something else? And what kind of role are you targeting next?",
         "What is your expected CTC, and what is your current notice period?",
@@ -143,6 +155,15 @@ def build_reply_instruction(
         ),
         "ask_resume": (
             "Congratulate them on a complete profile and ask if they have a resume (PDF/DOCX) to share."
+        ),
+        "confirm_resume": (
+            "Politely ask whether the resume we already have on file from earlier is still their latest version."
+        ),
+        "acknowledge_resume_confirmed": (
+            "Thank the candidate for confirming their existing resume, confirm their profile is ready, and explain next steps."
+        ),
+        "acknowledge_resume": (
+            "Acknowledge and thank the candidate for sending their new resume file, and explain next steps."
         ),
         "acknowledge_profile_ready": (
             "Thank the candidate, confirm their profile is complete, and explain that recruiters will reach out when a matching role appears."

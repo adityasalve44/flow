@@ -46,12 +46,13 @@ def test_tool_trajectory_declarations():
     from google.adk.tools import FunctionTool
     from app.tools import FLOW_V1_TOOLS
 
-    assert len(FLOW_V1_TOOLS) == 3
+    assert len(FLOW_V1_TOOLS) == 4
     tool_names = {t.__name__ for t in FLOW_V1_TOOLS}
     assert tool_names == {
         "get_candidate_snapshot",
         "explain_recruitment_term",
         "recall_candidate_history",
+        "record_resume_confirmation",
     }
 
     for tool_callable in FLOW_V1_TOOLS:

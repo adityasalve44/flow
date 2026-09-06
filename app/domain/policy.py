@@ -15,6 +15,7 @@ Core responsibilities (§8, FLOW-019 of REVIEW_AND_PLAN.md):
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
+import re
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -589,6 +590,39 @@ def evaluate_policy_step(
                 detail=str(g_ctx),
             )
 
+    # Resume confirmation response check (FLOW-036 & §11)
+    elif getattr(conversation, "ask_counts", {}).get("resume", 0) > 0 and (
+        getattr(extraction, "resume_intent", None) == "confirming_existing"
+        or any(f.key == "resume" for f in extraction.facts)
+        or bool(
+            re.search(
+                r"^(yes|yeah|yup|y|correct|it is|latest|current|all up to date|still latest)\b",
+                (getattr(extraction, "raw_message_text", "") or "").strip().lower(),
+            )
+        )
+    ):
+        from app.services.resume import confirm_current_resume
+
+        current_resume = uow.resumes.get_current(candidate.id)
+        if current_resume is not None:
+            confirm_current_resume(uow, candidate.id)
+        uow.attributes.add(
+            CandidateAttribute(
+                candidate_id=candidate.id,
+                key="resume",
+                value={"status": "confirmed"},
+                raw_text=getattr(extraction, "raw_message_text", None),
+                source=SourceEnum.candidate_confirmed,
+                confidence=ConfidenceEnum.confirmed,
+                status=AttributeStatusEnum.current,
+                data_class=DataClassEnum.operational,
+            )
+        )
+        chosen_directive = PolicyDirective(
+            name="acknowledge_resume_confirmed",
+            reason="Candidate confirmed existing resume on file (§11)",
+        )
+
     # Check missing fields for rungs 11, 12, 13
     else:
         missing_fields = score_missing_fields(
@@ -609,18 +643,41 @@ def evaluate_policy_step(
                     fields_to_ask=missing_fields or ["desired_role", "expected_ctc"],
                     reason="Refresh mode: reconfirm current career targets",
                 )
-        # Rung 11: ask_resume (profile ready or substantially complete, no current resume)
-        elif ready and not any(f.key == "resume" for f in current_facts):
-            chosen_directive = PolicyDirective(
-                name="ask_resume",
-                reason="Profile substantially complete; request resume",
-            )
-        # Rung 13: acknowledge_profile_ready (all 6 baseline fields confirmed)
+        # Rung 11: Resume confirmation / ask_resume (FLOW-036 & §11)
+        # Flow asks for a resume once per recruitment interaction, never twice
         elif ready:
-            chosen_directive = PolicyDirective(
-                name="acknowledge_profile_ready",
-                reason="All six baseline fields confirmed; profile ready",
-            )
+            current_resume = uow.resumes.get_current(candidate.id)
+            has_attr_resume = any(f.key == "resume" for f in current_facts)
+            already_asked_resume = getattr(conversation, "ask_counts", {}).get("resume", 0) > 0
+
+            if already_asked_resume or has_attr_resume:
+                chosen_directive = PolicyDirective(
+                    name="acknowledge_profile_ready",
+                    reason="All six baseline fields confirmed; profile ready",
+                )
+            elif current_resume is not None:
+                now_dt = now or datetime.now(timezone.utc)
+                is_fresh = (
+                    current_resume.confirmed_at is not None
+                    and (now_dt - current_resume.confirmed_at).days <= 365
+                )
+                if not is_fresh:
+                    chosen_directive = PolicyDirective(
+                        name="confirm_resume",
+                        fields_to_ask=["resume"],
+                        reason="Resume exists on file but confirmation is missing or stale (§11)",
+                    )
+                else:
+                    chosen_directive = PolicyDirective(
+                        name="acknowledge_profile_ready",
+                        reason="Resume already confirmed; profile ready",
+                    )
+            else:
+                chosen_directive = PolicyDirective(
+                    name="ask_resume",
+                    fields_to_ask=["resume"],
+                    reason="Profile substantially complete; request resume",
+                )
         # Rung 12: ask_next (default top 1-2 scored fields)
         else:
             chosen_directive = PolicyDirective(

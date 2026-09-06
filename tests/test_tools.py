@@ -72,6 +72,19 @@ def test_function_declarations_expose_no_identity_parameters():
     assert "tool_context" not in g_props
     assert "term" in g_props
 
+    # 3. Resume confirmation tool
+    from app.tools.resume import record_resume_confirmation
+    resume_tool = FunctionTool(func=record_resume_confirmation)
+    resume_decl = resume_tool._get_declaration()
+
+    assert resume_decl.name == "record_resume_confirmation"
+    r_schema = resume_decl.parameters_json_schema or {}
+    r_props = r_schema.get("properties", {})
+    assert "candidate_id" not in r_props
+    assert "phone_number" not in r_props
+    assert "tool_context" not in r_props
+    assert len(r_props) == 0
+
 
 def test_candidate_snapshot_excludes_sensitive_attributes():
     """
@@ -237,10 +250,11 @@ def test_explain_recruitment_term_unknown_term():
 
 def test_flow_v1_tools_list():
     """Verify FLOW_V1_TOOLS contains the expected safe tool callables."""
-    assert len(FLOW_V1_TOOLS) == 3
+    assert len(FLOW_V1_TOOLS) == 4
     tool_names = {t.__name__ for t in FLOW_V1_TOOLS}
     assert tool_names == {
         "get_candidate_snapshot",
         "explain_recruitment_term",
         "recall_candidate_history",
+        "record_resume_confirmation",
     }
