@@ -24,6 +24,7 @@ from app.models.candidate import (
     Conversation,
     Message,
 )
+from app.models.attribute import CandidateAttribute
 
 __all__ = [
     "Base",
@@ -41,6 +42,7 @@ __all__ = [
     "SourceEnum",
     # Models
     "Candidate",
+    "CandidateAttribute",
     "CandidateProfile",
     "Conversation",
     "Message",
