@@ -121,15 +121,21 @@ def score_missing_fields(
     current_facts: list[Fact],
     recently_asked: list[str] | None = None,
     declined_keys: set[str] | None = None,
+    ask_counts: dict[str, int] | None = None,
 ) -> list[str]:
     """
     Compute next-question scores across all registry keys:
       score(field) = importance * missingness * recency_penalty * refusal_penalty
 
-    Returns the top 1 or 2 (if adjacent) fields to ask.
+    Invariants (§8, FLOW-025):
+    - Hard cap of 2 asks per message.
+    - Hard cap of 3 lifetime asks per field on the conversation.
+    - Only unconfirmed blocking fields are solicited via ask_next.
+    - A second field is only added if topically adjacent to the top-scoring ask.
     """
     recent = set(recently_asked or [])
-    declined = declined_keys or set()
+    declined = set(declined_keys or [])
+    counts = ask_counts or {}
 
     # Determine status of each key
     confirmed_keys = {
@@ -148,6 +154,10 @@ def score_missing_fields(
     scores: list[tuple[str, float]] = []
 
     for key, spec in REGISTRY.items():
+        # Hard lifetime cap: maximum 3 asks per field per conversation
+        if counts.get(key, 0) >= 3:
+            continue
+
         importance = spec.importance
 
         # Missingness
@@ -158,31 +168,48 @@ def score_missing_fields(
         else:
             missingness = 1.0
 
-        if missingness == 0.0:
+        if missingness <= 0.0:
             continue
 
         # Recency penalty: suppresses fields asked in the last two turns
-        recency_penalty = 0.1 if key in recent else 1.0
+        recency_penalty = 0.05 if key in recent else 1.0
 
         # Refusal penalty: heavily suppresses fields the candidate declined
-        refusal_penalty = 0.05 if key in declined else 1.0
+        refusal_penalty = 0.01 if key in declined else 1.0
 
         final_score = importance * missingness * recency_penalty * refusal_penalty
         scores.append((key, final_score))
 
-    # Sort descending by score, prioritizing blocking keys on ties
-    scores.sort(key=lambda item: (item[1], 1 if item[0] in BLOCKING_KEYS else 0), reverse=True)
+    # Primary ask must be a missing blocking field (solicitation rule)
+    blocking_candidates = [
+        (k, s) for k, s in scores if k in BLOCKING_KEYS and s > 0.0
+    ]
+    blocking_candidates.sort(key=lambda item: item[1], reverse=True)
 
-    if not scores or scores[0][1] <= 0.0:
+    if not blocking_candidates:
         return []
 
-    top_key = scores[0][0]
+    top_key = blocking_candidates[0][0]
     result = [top_key]
 
-    # Check for adjacent second key
+    # Check for adjacent second key (hard cap of 2 asks per message)
+    # Only blocking fields can be solicited; never solicit declined or recent fields
     adjacent_allowed = ADJACENCY_MAP.get(top_key, set())
-    for candidate_key, score in scores[1:]:
-        if score > 0.0 and candidate_key in adjacent_allowed:
+    remaining_scores = sorted(
+        [
+            item
+            for item in scores
+            if item[0] != top_key
+            and item[0] in BLOCKING_KEYS
+            and item[0] not in declined
+            and item[0] not in recent
+            and item[1] > 0.1
+        ],
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    for candidate_key, score in remaining_scores:
+        if candidate_key in adjacent_allowed:
             result.append(candidate_key)
             break
 
@@ -369,6 +396,12 @@ def evaluate_policy_step(
     # 5. Evaluate the 13-Rung Ladder (§8)
     chosen_directive: PolicyDirective
 
+    # Conversation ask counters
+    ask_counts = getattr(conversation, "ask_counts", None)
+    if ask_counts is None:
+        ask_counts = {}
+        conversation.ask_counts = ask_counts
+
     # Rung 1: disengage_silent (deflection_count >= 3)
     if conversation.deflection_count >= 3:
         conversation.status = ConversationStatusEnum.closed
@@ -409,7 +442,9 @@ def evaluate_policy_step(
     # Rung 6: answer_and_continue (candidate asked question related to pending ask)
     elif any(q.is_related_to_pending for q in extraction.questions):
         rel_q = next(q for q in extraction.questions if q.is_related_to_pending)
-        missing = score_missing_fields(current_facts, recently_asked, declined_keys)
+        missing = score_missing_fields(
+            current_facts, recently_asked, declined_keys, ask_counts=ask_counts
+        )
         chosen_directive = PolicyDirective(
             name="answer_and_continue",
             question_topic=rel_q.topic,
@@ -438,7 +473,9 @@ def evaluate_policy_step(
         chosen_directive = PolicyDirective(
             name="redirect",
             question_topic=extraction.questions[0].topic,
-            fields_to_ask=score_missing_fields(current_facts, recently_asked, declined_keys)[:1],
+            fields_to_ask=score_missing_fields(
+                current_facts, recently_asked, declined_keys, ask_counts=ask_counts
+            )[:1],
             reason="Off-topic question without answers",
         )
 
@@ -455,7 +492,9 @@ def evaluate_policy_step(
 
     # Check missing fields for rungs 11, 12, 13
     else:
-        missing_fields = score_missing_fields(current_facts, recently_asked, declined_keys)
+        missing_fields = score_missing_fields(
+            current_facts, recently_asked, declined_keys, ask_counts=ask_counts
+        )
 
         # Rung 11: ask_resume (profile ready or substantially complete, no current resume)
         if ready and not any(f.key == "resume" for f in current_facts):
@@ -476,6 +515,11 @@ def evaluate_policy_step(
                 fields_to_ask=missing_fields,
                 reason="Top scored missing fields",
             )
+
+    # Record ask counts on the conversation
+    if chosen_directive.fields_to_ask:
+        for f in chosen_directive.fields_to_ask:
+            conversation.ask_counts[f] = conversation.ask_counts.get(f, 0) + 1
 
     # Commit the transaction
     uow.commit()
