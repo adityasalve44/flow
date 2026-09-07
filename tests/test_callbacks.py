@@ -31,7 +31,6 @@ from app.agents.callbacks import (
     neutralise_injection_markers,
     on_model_error_callback,
 )
-from app.services.turn import SAFE_FALLBACK_REPLY
 
 
 def test_before_model_callback_50kb_truncation():
@@ -167,4 +166,8 @@ def test_on_model_error_callback_safe_degradation():
     assert response.content is not None
     assert response.content.role == "model"
     assert len(response.content.parts) == 1
-    assert response.content.parts[0].text == SAFE_FALLBACK_REPLY
+    # The free-form fallback is drawn at random from the pool so repeated
+    # errors never look copy-pasted; any pool entry is a valid degradation.
+    from app.agents.callbacks import _FALLBACK_POOL
+
+    assert response.content.parts[0].text in _FALLBACK_POOL

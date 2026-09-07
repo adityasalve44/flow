@@ -145,12 +145,17 @@ def after_tool_callback(
     tool: BaseTool,
     args: dict[str, Any],
     tool_context: Context,
-    response: dict[str, Any],
+    tool_response: dict[str, Any] | None = None,
+    **_kwargs: Any,
 ) -> dict[str, Any] | None:
     """Audit tool execution: log tool name, duration, and result shape — NEVER the payload.
 
     Prevents sensitive candidate data or raw PII from appearing in tool logs.
+
+    ``tool_response`` is the keyword ADK (>=2.x) passes for the tool's return
+    value; older call sites used ``response`` positionally, which still works.
     """
+    response = tool_response
     tool_name = getattr(tool, "name", str(tool))
     start_time = None
     state = getattr(tool_context, "state", None)

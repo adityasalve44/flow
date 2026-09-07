@@ -8,15 +8,14 @@ Core requirements (§8, FLOW-018 of REVIEW_AND_PLAN.md):
 - Validation failure degrades to an empty extraction rather than raising.
 """
 
-
 from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.genai.types import Content
 
 from app.agents.callbacks import before_model_callback, on_model_error_callback
+from app.agents.models import resolve_model
 from app.agents.prompts.extraction import EXTRACTOR_SYSTEM_INSTRUCTION
 from app.agents.schemas import TurnExtraction
-from app.config import get_settings
 
 EXTRACTION_OUTPUT_KEY = "temp:extraction"
 
@@ -36,7 +35,7 @@ def ensure_valid_extraction_callback(callback_context: CallbackContext) -> Conte
 
 
 def create_extractor_agent(
-    model: str | None = None,
+    model: object | None = None,
     name: str = "extractor",
 ) -> LlmAgent:
     """
@@ -50,8 +49,7 @@ def create_extractor_agent(
     - after_agent_callback ensures degradation to empty extraction if parsing fails.
     - Guardrails: before_model_callback (caps size, neutralises injections), on_model_error_callback.
     """
-    settings = get_settings()
-    selected_model = model or settings.extractor_model
+    selected_model = resolve_model("extractor", override=model)
 
     return LlmAgent(
         name=name,

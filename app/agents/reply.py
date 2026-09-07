@@ -18,12 +18,12 @@ from app.agents.callbacks import (
     before_tool_callback,
     on_model_error_callback,
 )
+from app.agents.models import resolve_model
 from app.agents.prompts.reply import reply_instruction_provider
-from app.config import get_settings
 
 
 def create_reply_agent(
-    model: str | None = None,
+    model: object | None = None,
     name: str = "replier",
     tools: list[Any] | None = None,
     instruction_provider: Callable[..., Any] | None = None,
@@ -40,8 +40,7 @@ def create_reply_agent(
         * before_tool_callback / after_tool_callback (structured tool execution audit logging)
         * on_model_error_callback (safe degradation without crashing)
     """
-    settings = get_settings()
-    selected_model = model or settings.replier_model
+    selected_model = resolve_model("replier", override=model)
     provider = instruction_provider or reply_instruction_provider
 
     return LlmAgent(

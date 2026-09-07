@@ -195,7 +195,9 @@ def inspect_candidate(
                 {
                     "location_raw": loc.location_raw,
                     "location_norm": loc.location_norm,
-                    "kind": loc.kind,
+                    "strength": loc.strength,
+                    "work_mode": loc.work_mode,
+                    "is_hard_requirement": loc.is_hard_requirement,
                 }
                 for loc in loc_rows
             ],

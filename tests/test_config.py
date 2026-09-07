@@ -20,8 +20,9 @@ def test_defaults_from_env(monkeypatch):
     assert s.active_window_hours == 24
     assert s.stale_profile_days == 365
     assert s.max_deflections == 2
-    assert s.extractor_model == "gemini-3.6-flash"
-    assert s.replier_model == "gemini-3.6-flash"
+    assert s.extractor_model == "gemini-flash-lite-latest"
+    assert s.replier_model == "gemini-flash-lite-latest"
+    assert s.llm_provider == "gemini"
     assert s.env == "development"
 
 
@@ -70,3 +71,32 @@ def test_import_with_no_env_does_not_raise(monkeypatch):
     # We import the module — the import itself should be side-effect free.
     # Only constructing Settings() without required fields raises.
     import app.config  # noqa: F401  — just checking the import
+
+
+def _base_settings(**overrides):
+    defaults = dict(
+        database_url="postgresql+psycopg://u:p@localhost/flow",
+        google_api_key="test-key",
+    )
+    defaults.update(overrides)
+    return Settings(**defaults)
+
+
+def test_llm_provider_normalised_and_validated():
+    assert _base_settings(llm_provider="GROQ").llm_provider == "groq"
+    assert _base_settings(llm_provider="  Gemini ").llm_provider == "gemini"
+
+    import pytest
+
+    with pytest.raises(ValueError):
+        _base_settings(llm_provider="openai")
+
+
+def test_resolve_model_gemini_default():
+    from app.agents.models import resolve_model
+
+    get_settings.cache_clear()
+    assert resolve_model("extractor") == "gemini-flash-lite-latest"
+    assert resolve_model("replier") == "gemini-flash-lite-latest"
+    # An explicit override is always returned untouched.
+    assert resolve_model("replier", override="some-model") == "some-model"

@@ -28,10 +28,25 @@ class Settings(BaseSettings):
     # --- Google / Gemini ---
     google_api_key: str
 
+    # --- LLM provider selection ---
+    # "gemini" (native google-genai) or "groq" (Llama/Kimi/etc via LiteLLM).
+    # Flip LLM_PROVIDER and the whole agent pipeline swaps provider; each
+    # provider keeps its own model names below so switching back is lossless.
+    llm_provider: str = "gemini"
+
     # Models — separate configs so extractor (precision) and replier (fluency)
-    # can be tuned independently.
-    extractor_model: str = "gemini-3.6-flash"
-    replier_model: str = "gemini-3.6-flash"
+    # can be tuned independently. Used when llm_provider == "gemini".
+    # gemini-flash-lite-latest: widest free-tier quota on the current key.
+    extractor_model: str = "gemini-flash-lite-latest"
+    replier_model: str = "gemini-flash-lite-latest"
+    summariser_model: str = "gemini-flash-lite-latest"
+
+    # --- Groq (used when llm_provider == "groq"; requires `pip install litellm`) ---
+    # Model ids are Groq's own (may include a "/"), e.g. "openai/gpt-oss-120b",
+    # "qwen/qwen3.8-27b". The provider prefix is added automatically.
+    groq_api_key: str = ""
+    groq_extractor_model: str = "openai/gpt-oss-120b"
+    groq_replier_model: str = "openai/gpt-oss-120b"
 
     # --- Environment ---
     env: str = "development"
@@ -73,6 +88,15 @@ class Settings(BaseSettings):
     supabase_resume_bucket: str = "resumes"
     local_storage_dir: str = ".storage"
 
+    @field_validator("llm_provider", mode="before")
+    @classmethod
+    def _normalise_provider(cls, v: str | None) -> str:
+        """Accept any casing/whitespace; validate against the known providers."""
+        provider = (v or "gemini").strip().lower()
+        if provider not in ("gemini", "groq"):
+            raise ValueError(f"llm_provider must be 'gemini' or 'groq', got {v!r}")
+        return provider
+
     @field_validator("database_url", "test_database_url", mode="before")
     @classmethod
     def _coerce_db_url(cls, v: str | None) -> str | None:
@@ -110,4 +134,7 @@ def get_settings() -> Settings:
     if settings.google_api_key:
         os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
         os.environ.setdefault("GEMINI_API_KEY", settings.google_api_key)
+    if settings.groq_api_key:
+        # LiteLLM reads GROQ_API_KEY from the environment.
+        os.environ.setdefault("GROQ_API_KEY", settings.groq_api_key)
     return settings

@@ -84,25 +84,31 @@ def summarise_messages(
     messages: list[Message],
     conversation: Conversation,
     client: Any | None = None,
-    model: str = "gemini-3.6-flash",
+    model: str | None = None,
 ) -> str:
     """
     Produce a concise conversation summary.
     Attempts LLM summarisation via Gemini API if client/key is available;
     falls back cleanly to deterministic structured summarisation.
+
+    Summarisation always runs on Gemini directly (not the agent pipeline's
+    provider) — it is a cheap one-shot call with a robust deterministic
+    fallback, so it does not go through app.agents.models.
     """
     if not messages:
         return f"Empty conversation in mode '{conversation.mode.value}' with 0 messages."
+
+    settings = get_settings()
+    model = model or settings.summariser_model
 
     # Try LLM summarisation
     llm_client = client
     if llm_client is None:
         try:
-            settings = get_settings()
-            if settings.gemini_api_key:
+            if settings.google_api_key:
                 from google import genai
 
-                llm_client = genai.Client(api_key=settings.gemini_api_key)
+                llm_client = genai.Client(api_key=settings.google_api_key)
         except Exception:
             llm_client = None
 
